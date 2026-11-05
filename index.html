@@ -149,22 +149,22 @@
         </button>
         <button class="modeTab" data-mode="el">
           <span class="t">ElevenLabs</span><span class="d">ကိုယ့် clone အသံ</span>
-          <span class="badgePro">🔒 PRO</span>
+          <span class="badgePro proBadge">🔒 PRO</span>
         </button>
         <button class="modeTab" data-mode="gemini">
           <span class="t">Gemini TTS</span><span class="d">Google studio အသံ ၃၀</span>
-          <span class="badgePro">🔒 PRO</span>
+          <span class="badgePro proBadge">🔒 PRO</span>
         </button>
         <button class="modeTab" data-mode="f5">
           <span class="t">F5 Clone</span><span class="d">နမူနာ အသံကနေ clone</span>
-          <span class="badgePro">🔒 PRO</span>
+          <span class="badgePro proBadge">🔒 PRO</span>
         </button>
       </div>
 
       <!-- EDGE pane -->
       <div class="modePane" id="pane-edge">
-        <label>စာသား (အများဆုံး ၆၀၀ လုံး)</label>
-        <textarea id="edgeText" maxlength="900" placeholder="အသံ ပြောင်းချင်တဲ့ မြန်မာ စာသား ရေးပါ...">မင်္ဂလာပါ ရှင်။ ဒီနေ့ အကြောင်းလေး ပြောပြချင်လို့ပါ။</textarea>
+        <label>စာသား</label>
+        <textarea id="edgeText" placeholder="အသံ ပြောင်းချင်တဲ့ မြန်မာ စာသား ရေးပါ...">မင်္ဂလာပါ ရှင်။ ဒီနေ့ အကြောင်းလေး ပြောပြချင်လို့ပါ။</textarea>
         <div class="counter" id="edgeCounter"></div>
         <label>အသံ</label>
         <select id="edgeVoice">
@@ -191,11 +191,11 @@
         <div class="counter" id="elCounter"></div>
         <label>အသံ (Voice)</label>
         <div class="row">
-          <select id="elVoice" style="flex:2;"><option value="">— မူလ အသံ (default) —</option></select>
+          <select id="elVoice" style="flex:2;"></select>
           <button id="btnElVoices" type="button">အသံ စာရင်း ယူမယ်</button>
           <button id="btnElDelete" type="button" title="ရွေးထားတဲ့ အသံ ဖျက်မယ်" disabled>🗑️</button>
         </div>
-        <div class="muted">စာရင်း မယူရင် မူလ အသံနဲ့ ထုတ်ပေးပါမယ်။</div>
+        <div class="muted hidden" id="elNoVoices">«NLO» clone အသံ မတွေ့ပါ — အောက်က «အသံ အသစ် ထည့်» မှာ «NLO» နာမည်နဲ့ အရင် ထည့်ပါ။</div>
         <button class="profileHead" id="elCloneToggle" type="button" style="margin-top:12px;">
           <span>➕ အသံ အသစ် ထည့် (Clone)</span><span id="elCloneChevron">▸</span>
         </button>
@@ -563,6 +563,7 @@ async function saveKeys(){
 const PRO_KEY_FIELD = { el:"el_key", gemini:"gemini_key", f5:"hf_token" };
 const PRO_KEY_LABEL = { el:"ElevenLabs API Key", gemini:"Gemini API Key", f5:"HuggingFace Token" };
 function refreshProLocks(){
+  document.querySelectorAll(".proBadge").forEach(b=>{ b.textContent = isOwner() ? "PRO" : "🔒 PRO"; });
   document.querySelectorAll("[data-prolock]").forEach(el => {
     const pane = el.closest(".modePane"); if (!pane) return;
     const mode = pane.id.replace("pane-","");
@@ -602,23 +603,92 @@ async function showResult(blob, mode, chars, ext){
 }
 
 /* ---------------- generators ---------------- */
+/* Edge has no length cap in the app: the server accepts ~600 chars per
+   request, so long texts are split at sentence boundaries into <=550-char
+   chunks, synthesized sequentially, and stitched back into one WAV. */
+function splitSentences(text){
+  const out = []; let cur = "";
+  for (const ch of text){
+    cur += ch;
+    if ("။.!?\n".includes(ch)){ out.push(cur); cur = ""; }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+function splitEdgeText(text, maxLen){
+  maxLen = maxLen || 550;
+  const chunks = []; let cur = "";
+  const flush = ()=>{ const t = cur.trim(); if (t) chunks.push(t); cur = ""; };
+  for (const s of splitSentences(text)){
+    if (s.length > maxLen){
+      flush();
+      let rest = s;
+      while (rest.length > maxLen){
+        const win = rest.slice(0, maxLen);
+        const cand = Math.max(win.lastIndexOf(" "), win.lastIndexOf("၊"), win.lastIndexOf(","));
+        const cut = cand > maxLen * 0.4 ? cand + 1 : maxLen;
+        const piece = rest.slice(0, cut).trim();
+        if (piece) chunks.push(piece);
+        rest = rest.slice(cut);
+      }
+      cur = rest;
+    } else if ((cur + s).length <= maxLen){
+      cur += s;
+    } else {
+      flush(); cur = s;
+    }
+  }
+  flush();
+  return chunks.filter(c => c.length > 0);
+}
+function concatAudioBuffers(ctx, bufs){
+  const nCh = bufs[0].numberOfChannels, sr = bufs[0].sampleRate;
+  const total = bufs.reduce((a, b) => a + b.length, 0);
+  const out = ctx.createBuffer(nCh, total, sr);
+  for (let ch = 0; ch < nCh; ch++){
+    const dst = out.getChannelData(ch); let pos = 0;
+    for (const b of bufs){
+      dst.set(b.getChannelData(Math.min(ch, b.numberOfChannels - 1)), pos);
+      pos += b.length;
+    }
+  }
+  return new Blob([encodeWav(out)], { type: "audio/wav" });
+}
+
 async function genEdge(){
   if (disabledModes.includes("edge")) return setMsg("statusMsg", "⛔ ဒီ TTS ကို admin က ပိတ်ထားပါတယ်။", "err");
   const text = $("edgeText").value.trim();
   if (!text) return setMsg("statusMsg", "စာသား အရင် ရေးပါ။", "err");
-  if (text.length > 600) return setMsg("statusMsg", "စာသား ၆၀၀ လုံး ထက် ကျော်နေပါတယ် — လျှော့ရေးပါ။", "err");
   const rv = parseInt($("edgeRate").value,10);
   const rate = (rv>=100 ? "+"+(rv-100) : "-"+(100-rv)) + "%";
   const pv = parseInt($("edgePitch").value,10);
   const pitch = (pv>=0 ? "+"+pv : ""+pv) + "Hz";
+  const voice = $("edgeVoice").value;
   busy(true); showWake(false);
   try{
-    const resp = await apiFetch("/api/pub/synthesize", {
-      method:"POST", headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ text, voice: $("edgeVoice").value, rate, pitch })
-    });
-    if (!resp.ok) throw new Error(await apiErrorText(resp));
-    showResult(await resp.blob(), "edge", text.length, ".mp3");
+    const fetchChunk = async (t)=>{
+      const resp = await apiFetch("/api/pub/synthesize", {
+        method:"POST", headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ text: t, voice, rate, pitch })
+      });
+      if (!resp.ok) throw new Error(await apiErrorText(resp));
+      return await resp.blob();
+    };
+    if (text.length <= 550){
+      showResult(await fetchChunk(text), "edge", text.length, ".mp3");
+    } else {
+      const chunks = splitEdgeText(text, 550);
+      const ctx = audioCtx();
+      const bufs = [];
+      for (let i = 0; i < chunks.length; i++){
+        setMsg("statusMsg", "အပိုင်း " + (i+1) + "/" + chunks.length + " ထုတ်နေပါတယ်...", "info");
+        const blob = await fetchChunk(chunks[i]);
+        bufs.push(await ctx.decodeAudioData(await blob.arrayBuffer()));
+      }
+      const wav = concatAudioBuffers(ctx, bufs);
+      if (ctx.close) ctx.close();
+      showResult(wav, "edge", text.length, ".wav");
+    }
   }catch(e){ handleGenError(e); }
   busy(false);
 }
@@ -627,10 +697,10 @@ async function genEl(){
   if (disabledModes.includes("el")) return setMsg("statusMsg", "⛔ ဒီ TTS ကို admin က ပိတ်ထားပါတယ်။", "err");
   const text = $("elText").value.trim();
   if (!text) return setMsg("statusMsg", "စာသား အရင် ရေးပါ။", "err");
+  if (!$("elVoice").value) return setMsg("statusMsg", "အသံ အရင် ရွေးပါ။", "err");
   busy(true); showWake(false);
   try{
-    const body = { text, model_id: "eleven_v4" };
-    const vid = $("elVoice").value; if (vid) body.voice_id = vid;
+    const body = { text, voice_id: $("elVoice").value, model_id: "eleven_v4" };
     const resp = await apiFetch("/api/pub/el/tts", {
       method:"POST", headers: proHeaders({ "Content-Type":"application/json" }),
       body: JSON.stringify(body)
@@ -648,13 +718,23 @@ async function loadElVoices(){
     if (!resp.ok) throw new Error(await apiErrorText(resp));
     const d = await resp.json();
     const list = Array.isArray(d) ? d : (d.voices || []);
-    const sel = $("elVoice");
-    sel.innerHTML = '<option value="">— မူလ အသံ (default) —</option>';
-    list.forEach(v=>{
-      const id = v.voice_id || v.id, name = v.name || id;
-      if (id){ const o=document.createElement("option"); o.value=id; o.textContent=name; sel.appendChild(o); }
+    /* Clone voices only: premade English voices (Roger/George/…) are dropped.
+       Entries without a category field (old server shape) are kept. */
+    const clones = list.filter(v=>{
+      const cat = v && v.category;
+      return !cat || cat === "cloned" || cat === "professional";
     });
-    setMsg("statusMsg", "✅ အသံ "+list.length+" ခု ရပါပြီ။", "ok");
+    /* Only the single clone named exactly "NLO" is offered (first match). */
+    const nlo = clones.find(v => ((v && v.name) || "").trim().toLowerCase() === "nlo");
+    const sel = $("elVoice");
+    sel.innerHTML = "";
+    if (nlo){
+      const id = nlo.voice_id || nlo.id;
+      if (id){ const o=document.createElement("option"); o.value=id; o.textContent=nlo.name || id; sel.appendChild(o); }
+    }
+    if (sel.options.length) sel.value = sel.options[0].value;
+    $("elNoVoices").classList.toggle("hidden", sel.options.length > 0);
+    setMsg("statusMsg", "✅ အသံ "+sel.options.length+" ခု ရပါပြီ။", "ok");
     syncElDeleteBtn();
   }catch(e){ handleGenError(e); }
 }
@@ -692,7 +772,8 @@ async function addElVoice(){
     const d = await resp.json();
     const newId = d.voice_id || d.id || "";
     await loadElVoices();
-    if (newId) $("elVoice").value = newId;
+    /* Same "NLO"-only rule: select the new voice only if it is in the list. */
+    if (newId && $("elVoice").querySelector('option[value="' + newId + '"]')) $("elVoice").value = newId;
     syncElDeleteBtn();
     $("elCloneName").value = ""; $("elCloneSample").value = "";
     setMsg("statusMsg", "✅ အသံ အသစ် «" + (d.name || name) + "» ထည့်ပြီးပါပြီ။", "ok");
@@ -842,7 +923,7 @@ function fillGeminiVoices(){
 }
 function init(){
   fillGeminiVoices();
-  bindCounter("edgeText","edgeCounter",600);
+  bindCounter("edgeText","edgeCounter",0);
   bindCounter("elText","elCounter",0);
   bindCounter("gemText","gemCounter",0);
   bindCounter("f5Text","f5Counter",0);
