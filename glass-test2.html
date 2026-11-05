@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glass bisect test</title>
+<style>
+  :root{--glassfill:linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,.015) 45%, rgba(255,255,255,.04));--glass-border:rgba(255,255,255,.18);}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:sans-serif;color:#fff8ee;min-height:100vh;background:#0a0a0b;
+    background-image:radial-gradient(rgba(255,255,255,.55) 2px, transparent 2.6px), repeating-linear-gradient(45deg, #ffb340 0 34px, #120c06 34px 68px, #ff5f2e 68px 102px, #120c06 102px 136px);
+    background-size:26px 26px, auto;}
+  body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:
+      radial-gradient(rgba(255,255,255,.10) 1.2px, transparent 1.8px),
+      linear-gradient(172deg, transparent calc(50% - 80px), rgba(255,176,84,.16) calc(50% - 50px), rgba(255,176,84,.85) 50%, rgba(255,176,84,.16) calc(50% + 50px), transparent calc(50% + 80px));
+    background-size:22px 22px, auto;}
+  .card{background:var(--glassfill);border:1px solid var(--glass-border);border-radius:16px;
+    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 18px 40px rgba(0,0,0,.45);
+    padding:20px;margin:22px;font-size:15px}
+  .wrap{max-width:1080px;margin:0 auto;padding:10px 16px;}
+  .heroish{position:relative;overflow:hidden}
+  .inner{background:var(--glassfill);border:1px solid var(--glass-border);border-radius:12px;
+    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);padding:12px;margin-top:12px}
+  h1{font-size:16px;margin:16px 22px 0}
+</style></head><body>
+<h1>BISECT TEST. Body background = bold stripes + white dots. A fixed ::before layer adds one wide amber band across the middle (50% height) + faint dots.</h1>
+<div class="card">P1 — card DIRECTLY on body. Inside should show the body-background stripes (blurred) if basic glass works.</div>
+<div class="card">P2 — same card, still direct. Focus on the MIDDLE band area of the page: does the wide amber band from the fixed ::before layer show inside the cards near the middle of the page?</div>
+<div class="wrap"><div class="card">P3 — card nested inside a plain .wrap div (like the real app). Do the stripes / amber band show inside?</div></div>
+<div class="wrap"><div class="card heroish">P4 — card inside .wrap PLUS overflow:hidden + position:relative (the real app hero combo). Do the stripes / band show inside?</div></div>
+<div class="wrap"><div class="card">P5 — outer card inside .wrap, with a NESTED inner glass row:<div class="inner">INNER ROW — do the stripes / band show inside this inner row?</div></div></div>
+</body></html>
