@@ -470,7 +470,7 @@
       <div class="modePane" id="pane-edge">
         <label>စာသား</label>
         <textarea id="edgeText" placeholder="အသံ ပြောင်းချင်တဲ့ မြန်မာ စာသား ရေးပါ...">မင်္ဂလာပါ ရှင်။ ဒီနေ့ အကြောင်းလေး ပြောပြချင်လို့ပါ။</textarea>
-        <div class="fixRow"><button type="button" class="small primary" data-fixopen="edgeText">✨ စာပြင်</button><button type="button" class="small" data-fix="edgeText">⚡ တန်း ပြင်</button></div>
+        <div class="fixRow"><button type="button" class="small primary" data-fixopen="edgeText">✨ စာပြင်</button><button type="button" class="small" data-fix="edgeText">⚡ တန်း ပြင်</button><button type="button" class="small" data-clear="edgeText">🗑 ဖျက်</button></div>
         <div class="fixChip hidden" id="fixChip-edgeText"></div>
         <div class="counter" id="edgeCounter"></div>
         <label>အသံ</label>
@@ -498,7 +498,7 @@
       <div class="modePane hidden" id="pane-el">
         <label>စာသား</label>
         <textarea id="elText" placeholder="ElevenLabs clone အသံနဲ့ ပြောမယ့် စာသား...">မင်္ဂလာပါ။ ကျွန်တော့် အသံနဲ့ ပြောနေတာပါ။</textarea>
-        <div class="fixRow"><button type="button" class="small primary" data-fixopen="elText">✨ စာပြင်</button><button type="button" class="small" data-fix="elText">⚡ တန်း ပြင်</button></div>
+        <div class="fixRow"><button type="button" class="small primary" data-fixopen="elText">✨ စာပြင်</button><button type="button" class="small" data-fix="elText">⚡ တန်း ပြင်</button><button type="button" class="small" data-clear="elText">🗑 ဖျက်</button></div>
         <div class="fixChip hidden" id="fixChip-elText"></div>
         <div class="counter" id="elCounter"></div>
         <label>အသံ (Voice)</label>
@@ -534,7 +534,7 @@
       <div class="modePane hidden" id="pane-gemini">
         <label>စာသား</label>
         <textarea id="gemText" placeholder="Gemini အသံနဲ့ ပြောမယ့် စာသား...">မင်္ဂလာပါ ရှင်။ ဒီနေ့ အကြောင်းလေး ပြောပြချင်လို့ပါ။</textarea>
-        <div class="fixRow"><button type="button" class="small primary" data-fixopen="gemText">✨ စာပြင်</button><button type="button" class="small" data-fix="gemText">⚡ တန်း ပြင်</button></div>
+        <div class="fixRow"><button type="button" class="small primary" data-fixopen="gemText">✨ စာပြင်</button><button type="button" class="small" data-fix="gemText">⚡ တန်း ပြင်</button><button type="button" class="small" data-clear="gemText">🗑 ဖျက်</button></div>
         <div class="fixChip hidden" id="fixChip-gemText"></div>
         <div class="counter" id="gemCounter"></div>
         <label>အသံ (Studio voice)</label>
@@ -569,9 +569,10 @@
         <div id="f5RefPreview" class="uploadPreview hidden"></div>
         <label>နမူနာ အသံထဲက စာသား (အတိအကျ)</label>
         <textarea id="f5RefText" style="min-height:48px;" placeholder="နမူနာ အသံထဲမှာ ပြောထားတဲ့ စာသား အတိအကျ ရေးပါ"></textarea>
+        <div class="fixRow"><button type="button" class="small" data-clear="f5RefText">🗑 ဖျက်</button></div>
         <label>ပြောမယ့် စာသား အသစ်</label>
         <textarea id="f5Text" placeholder="clone အသံနဲ့ ပြောမယ့် စာသား အသစ်..."></textarea>
-        <div class="fixRow"><button type="button" class="small primary" data-fixopen="f5Text">✨ စာပြင်</button><button type="button" class="small" data-fix="f5Text">⚡ တန်း ပြင်</button></div>
+        <div class="fixRow"><button type="button" class="small primary" data-fixopen="f5Text">✨ စာပြင်</button><button type="button" class="small" data-fix="f5Text">⚡ တန်း ပြင်</button><button type="button" class="small" data-clear="f5Text">🗑 ဖျက်</button></div>
         <div class="fixChip hidden" id="fixChip-f5Text"></div>
         <div class="counter" id="f5Counter"></div>
         <label>အသံနှုန်း</label>
@@ -591,9 +592,10 @@
         <div id="voxRefPreview" class="uploadPreview hidden"></div>
         <label>နမူနာ အသံထဲက စာသား (အတိအကျ)</label>
         <textarea id="voxRefText" style="min-height:48px;" placeholder="နမူနာ အသံထဲမှာ ပြောထားတဲ့ စာသား အတိအကျ ရေးပါ"></textarea>
+        <div class="fixRow"><button type="button" class="small" data-clear="voxRefText">🗑 ဖျက်</button></div>
         <label>ပြောမယ့် စာသား</label>
         <textarea id="voxText" placeholder="clone အသံနဲ့ ပြောမယ့် စာသား...">မင်္ဂလာပါ ခင်ဗျား။ ဒီနေ့ ရာသီဥတု သာယာတယ်နော်။</textarea>
-        <div class="fixRow"><button type="button" class="small primary" data-fixopen="voxText">✨ စာပြင်</button><button type="button" class="small" data-fix="voxText">⚡ တန်း ပြင်</button></div>
+        <div class="fixRow"><button type="button" class="small primary" data-fixopen="voxText">✨ စာပြင်</button><button type="button" class="small" data-fix="voxText">⚡ တန်း ပြင်</button><button type="button" class="small" data-clear="voxText">🗑 ဖျက်</button></div>
         <div class="fixChip hidden" id="fixChip-voxText"></div>
         <div class="counter" id="voxCounter"></div>
         <div class="proLock hidden" data-prolock></div>
@@ -735,6 +737,7 @@
     <div class="fixRow" style="margin-top:10px;">
       <button id="btnFixAuto" type="button">✨ အလိုအလျောက် ပြင်</button>
       <button id="btnFixSave" type="button" class="primary">💾 သိမ်းမယ်</button>
+      <button type="button" class="small" data-clear="fixEditorText">🗑 ဖျက်</button>
     </div>
   </div>
 </div>
@@ -1372,6 +1375,10 @@ function renderVoxStatus(){
   if (fixBtn) fixBtn.disabled = !usable;
   const fixOpenBtn = document.querySelector('#pane-vox [data-fixopen="voxText"]');
   if (fixOpenBtn) fixOpenBtn.disabled = !usable;
+  const clearBtn = document.querySelector('#pane-vox [data-clear="voxText"]');
+  if (clearBtn) clearBtn.disabled = !usable;
+  const clearRefBtn = document.querySelector('#pane-vox [data-clear="voxRefText"]');
+  if (clearRefBtn) clearRefBtn.disabled = !usable;
   const pane = $("pane-vox");
   if (pane) pane.classList.toggle("paneOff", !usable);
 }
@@ -2550,6 +2557,17 @@ function init(){
       fixSnapshots[ta.id] = ta.value;
       ta.dispatchEvent(new Event("input", { bubbles:true }));
       setMsg("statusMsg", "✨ စာပြင်ပြီးပါပြီ", "ok");
+    });
+  });
+  /* 🗑 ဖျက် clear buttons (every text area incl. ref transcripts + the
+     fix editor): empty the target, then let the "input" event drive all
+     existing behaviours — counters reset, fix chips hide on empty, and
+     the debounced draft saver persists the empty value. No confirmation. */
+  document.querySelectorAll("[data-clear]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const ta = $(b.dataset.clear); if (!ta) return;
+      ta.value = "";
+      ta.dispatchEvent(new Event("input", { bubbles:true }));
     });
   });
   /* ✨ စာပြင် editor sheet: open buttons, per-textarea state chips, and
