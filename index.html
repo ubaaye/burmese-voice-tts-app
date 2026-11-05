@@ -185,6 +185,13 @@
   .chipRow{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px;}
   .chip{padding:5px 11px;font-size:12.5px;border-radius:20px;line-height:1.4;}
   .chip.active{border-color:var(--accent);background:rgba(77,163,255,.22);color:#fff;}
+  /* Horizontally scrollable chip strip, snug under a text box: the
+     inner chip groups keep their own nowrap flex row inside it. */
+  .chipStrip{display:flex;flex-wrap:nowrap;overflow-x:auto;align-items:center;gap:8px;padding:2px 2px 6px;scrollbar-width:none;}
+  .chipStrip::-webkit-scrollbar{display:none;}
+  .chipStrip>*{flex:0 0 auto;}
+  .chipStrip .chipRow{flex-wrap:nowrap;gap:8px;margin:0;}
+  .chipStrip #spkChips{padding-right:8px;border-right:1px solid rgba(255,255,255,.14);}
   /* Centered waveform loading pop-up (shown while generating) */
   .loadPop{position:fixed;inset:0;z-index:75;display:flex;align-items:center;justify-content:center;
     padding:20px;background:rgba(3,6,16,.58);}
@@ -513,9 +520,11 @@
         <textarea id="elText" placeholder="ElevenLabs clone အသံနဲ့ ပြောမယ့် စာသား...">မင်္ဂလာပါ။ ကျွန်တော့် အသံနဲ့ ပြောနေတာပါ။</textarea>
         <div class="fixRow"><button type="button" class="small primary" data-fixopen="elText">✨ စာပြင်</button><button type="button" class="small" data-fix="elText">⚡ တန်း ပြင်</button><button type="button" class="small" data-clear="elText">🗑 ဖျက်</button></div>
         <div class="fixChip hidden" id="fixChip-elText"></div>
+        <div class="chipStrip" id="elChipStrip">
+          <div class="chipRow" id="elStyleChips"></div>
+        </div>
         <div class="counter" id="elCounter"></div>
         <label>ပြောဟန် (Style)</label>
-        <div class="chipRow" id="elStyleChips"></div>
         <label style="margin-top:4px;"><input type="checkbox" id="elPerLine" style="width:auto;"> တစ်ကြောင်းချင်း ထည့်မယ်</label>
         <div class="muted" style="margin-top:4px;">Chip နှိပ်ရင် စာသား အစ (သို့) တစ်ကြောင်းချင်း ဖွင့်ထားရင် cursor ရှိတဲ့ ကြောင်းမှာ [tag] ဝင်မယ်။ ElevenLabs က tag ကို မဖတ်ဘဲ ပြောဟန်ပဲ ပြောင်းတယ်။</div>
         <label>အသံ (Voice)</label>
@@ -553,12 +562,18 @@
         <textarea id="gemText" placeholder="Gemini အသံနဲ့ ပြောမယ့် စာသား...">မင်္ဂလာပါ ရှင်။ ဒီနေ့ အကြောင်းလေး ပြောပြချင်လို့ပါ။</textarea>
         <div class="fixRow"><button type="button" class="small primary" data-fixopen="gemText">✨ စာပြင်</button><button type="button" class="small" data-fix="gemText">⚡ တန်း ပြင်</button><button type="button" class="small" data-clear="gemText">🗑 ဖျက်</button></div>
         <div class="fixChip hidden" id="fixChip-gemText"></div>
+        <div class="chipStrip" id="gemChipStrip">
+          <div class="chipRow hidden" id="spkChips">
+            <button type="button" class="chip" id="spkChip1"></button>
+            <button type="button" class="chip" id="spkChip2"></button>
+          </div>
+          <div class="chipRow" id="gemStyleChips"></div>
+        </div>
         <div class="counter" id="gemCounter"></div>
         <label>အသံ (Studio voice)</label>
         <button id="gemVoiceBtn" class="pickBtn" type="button"><span class="pickLabel" id="gemVoiceBtnLabel"></span><span class="pickCaret">▾</span></button>
         <select id="gemVoice" class="hidden"></select>
         <label>ပြောဟန် (Style) — မဖြစ်မနေ မလိုပါ</label>
-        <div class="chipRow" id="gemStyleChips"></div>
         <input type="text" id="gemStyle" placeholder="ဥပမာ: Say cheerfully / ပျော်ပျော်ရွှင်ရွှင် ပြောပါ">
         <div class="muted" style="margin-top:4px;">Style ကို English လို ရေးမှ အသံနေအသံထား ပြောင်းပါတယ် — မြန်မာ စကားလုံး ရေးရင် အသံထဲ ဖတ်ထည့်သွားနိုင်တယ်။ အပေါ်က chip တွေ သုံးတာ အကောင်းဆုံးပါ။</div>
         <label style="margin-top:12px;"><input type="checkbox" id="gemPerLine" style="width:auto;"> တစ်ကြောင်းချင်း ထည့်မယ်</label>
@@ -576,10 +591,6 @@
             <select id="spk2Voice" class="hidden"></select>
           </div>
           <div class="muted">စာသားကို <b>Aung: ...</b> / <b>May: ...</b> ဆိုပြီး တစ်ကြောင်းစီ ရေးပါ။ (တစ်ယောက်တည်း အသံ ဆိုရင် ဒီ အဆင့်ကို ကျော်လို့ ရပါတယ်။)</div>
-        </div>
-        <div class="chipRow hidden" id="spkChips" style="margin-top:8px;">
-          <button type="button" class="chip" id="spkChip1"></button>
-          <button type="button" class="chip" id="spkChip2"></button>
         </div>
         <div style="text-align:right;margin-top:10px;"><button type="button" class="small" data-reset-pane="gemini">↺ Reset</button></div>
         <div class="proLock hidden" data-prolock></div>
