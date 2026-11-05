@@ -24,8 +24,11 @@
       linear-gradient(160deg,#0d1220 0%,#131a2e 55%,#0a0f1c 100%);
     background-attachment:fixed;
   }
-  .wrap{max-width:560px;margin:0 auto;padding:14px 12px 40px;}
-  header.top{display:flex;align-items:center;gap:10px;padding:8px 2px 14px;}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 16px 48px;}
+  header.top{display:flex;align-items:center;gap:10px;padding:10px 14px;margin-bottom:16px;
+    background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    box-shadow:0 8px 28px rgba(0,0,0,.35);}
   header.top .logo{font-size:26px;}
   header.top h1{font-size:19px;margin:0;font-weight:700;letter-spacing:.2px;}
   header.top .sub{font-size:11px;color:#0d1220;background:var(--gold);border-radius:20px;padding:2px 8px;font-weight:700;}
@@ -90,7 +93,10 @@
   .apBtn{width:42px;height:42px;flex:0 0 42px;border:none;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 6px 16px rgba(77,163,255,.35);}
   .audioPlayer.compact{margin-top:8px;padding:8px 10px;border-radius:12px;}
   .audioPlayer.compact .apBtn{width:34px;height:34px;flex-basis:34px;font-size:14px;}
-  .apSeek{flex:1;min-width:0;accent-color:var(--accent);height:4px;cursor:pointer;}
+  .apWave{flex:1;min-width:0;height:36px;display:flex;align-items:center;gap:2px;cursor:pointer;padding:0 2px;touch-action:manipulation;}
+  .apBar{flex:1 1 0;min-width:2px;border-radius:2px;background:rgba(255,255,255,.22);height:20%;pointer-events:none;}
+  .apBar.on{background:linear-gradient(180deg,var(--accent),var(--accent2));}
+  .audioPlayer.compact .apWave{height:28px;}
   .apTime{font-size:12px;color:var(--muted);white-space:nowrap;min-width:74px;text-align:right;font-variant-numeric:tabular-nums;}
   .audioPlayer.compact .apTime{min-width:66px;font-size:11.5px;}
   .uploadPreview{margin-top:2px;}
@@ -103,8 +109,9 @@
     padding:9px 11px;font-size:12.5px;line-height:1.65;margin-top:10px;color:#cfe4ff;}
   /* Landing view (signed-out first impression: samples + features + how-to) */
   .landingPitch{font-size:14.5px;line-height:1.65;margin:4px 0 12px;}
-  .sampleRow{padding:9px 0;border-top:1px solid rgba(255,255,255,.08);}
-  .sampleRow:first-of-type{border-top:none;padding-top:2px;}
+  .sampleRow{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:12px;
+    padding:10px 12px;margin-top:10px;}
+  .sampleRow:first-of-type{margin-top:2px;}
   .sampleLabel{font-size:13.5px;font-weight:600;margin-bottom:2px;}
   .landingList{margin:4px 0 0;padding-left:20px;line-height:1.8;font-size:13.5px;}
   .landingSteps{margin:4px 0 0;padding-left:24px;line-height:1.8;font-size:13.5px;}
@@ -185,9 +192,70 @@
   }
   .drawer.open{transform:translateX(0);visibility:visible;transition:transform .28s ease;}
   .drawerHead{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:16px;margin-bottom:12px;}
+  /* ===== Website shell (landing nav / hero / grids / footer) ===== */
+  .siteNav{position:sticky;top:0;z-index:50;display:none;
+    background:rgba(10,15,28,.85);border-bottom:1px solid var(--glass-border);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+  body:has(#appArea.hidden) .siteNav{display:block;}
+  .navIn{max-width:1080px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:9px;}
+  .navLogo{font-size:22px;line-height:1;}
+  .navName{font-weight:700;font-size:16.5px;letter-spacing:.2px;}
+  .navSpacer{flex:1;}
+  .heroCard{position:relative;overflow:hidden;}
+  .heroCard::before{content:"";position:absolute;left:-15%;right:-15%;top:-70px;height:200px;
+    background:radial-gradient(closest-side,rgba(124,92,255,.38),transparent 70%);pointer-events:none;}
+  .heroCard>*{position:relative;}
+  .heroCard h2{font-size:clamp(25px,5.2vw,38px);line-height:1.3;margin:4px 0 8px;}
+  .heroCard h2::after{content:"";display:block;width:64px;height:4px;border-radius:2px;margin-top:12px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));}
+  .heroPitch{font-size:15px;line-height:1.7;color:#dbe6f5;margin:2px 0 16px;max-width:640px;}
+  .heroCtas{max-width:520px;}
+  .featGrid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:6px;}
+  .featCard{display:flex;gap:11px;align-items:flex-start;background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:11px 12px;}
+  .featIcon{font-size:19px;line-height:1.3;flex:0 0 auto;}
+  .featTitle{font-weight:700;font-size:14px;line-height:1.4;}
+  .featLine{font-size:12.5px;color:var(--muted);line-height:1.55;margin-top:1px;}
+  .stepsGrid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:6px;}
+  .stepCard{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:12px;
+    padding:12px;font-size:13.5px;line-height:1.7;}
+  .stepCard b{color:var(--accent);}
+  .siteFooter{text-align:center;padding:20px 10px 4px;color:var(--muted);}
+  .siteFooter .footName{font-size:14.5px;font-weight:700;color:var(--txt);}
+  .siteFooter .footTag{font-size:10px;font-weight:800;color:#0d1220;background:var(--gold);
+    border-radius:20px;padding:2px 8px;margin-left:7px;vertical-align:2px;}
+  .siteFooter .footLine{font-size:12px;line-height:1.6;margin-top:6px;}
+  #loginCard{max-width:440px;margin:26px auto;}
+  #appArea{max-width:880px;margin:0 auto;}
+  .sheet{max-width:640px;}
+  @media (min-width:640px){
+    .featGrid{grid-template-columns:1fr 1fr;}
+    .stepsGrid{grid-template-columns:1fr 1fr;}
+  }
+  @media (min-width:900px){
+    .card{padding:20px;margin-bottom:16px;}
+    #landingView{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
+    #landingView>.card{margin-bottom:0;}
+    #landingView>.heroCard,#landingView>.stepsCard,#landingView>.siteFooter{grid-column:1 / -1;}
+    .featGrid{grid-template-columns:1fr;}
+    h2{font-size:18px;}
+  }
+  @media (min-width:1024px){
+    .stepsGrid{grid-template-columns:repeat(4,1fr);}
+    .featGrid{grid-template-columns:1fr 1fr;}
+  }
 </style>
 </head>
 <body>
+<nav class="siteNav" id="siteNav">
+  <div class="navIn">
+    <span class="navLogo">🎙️</span>
+    <span class="navName">Burmese Voice TTS</span>
+    <span class="sub">PUBLIC</span>
+    <span class="navSpacer"></span>
+    <button id="btnNavLogin" class="primary small" type="button">Login ဝင်မယ်</button>
+  </div>
+</nav>
 <div class="wrap">
   <header class="top">
     <button id="btnMenu" class="hidden" type="button" title="Menu" style="font-size:16px;line-height:1;">☰</button>
@@ -200,10 +268,10 @@
 
   <!-- ============ LANDING (signed-out first view: samples + features + how-to) ============ -->
   <div id="landingView">
-    <section class="card">
+    <section class="card heroCard">
       <h2>🎙️ Burmese Voice TTS</h2>
-      <p class="landingPitch">မြန်မာ စာသားကို အသံ ပြောင်းပေးတဲ့ app — အမျိုးသား/အမျိုးသမီး အသံတွေ၊ ကိုယ်ပိုင် အသံ clone တွေနဲ့ အခမဲ့ စမ်းသုံးနိုင်ပါတယ်။</p>
-      <div class="row">
+      <p class="landingPitch heroPitch">မြန်မာ စာသားကို အသံ ပြောင်းပေးတဲ့ app — အမျိုးသား/အမျိုးသမီး အသံတွေ၊ ကိုယ်ပိုင် အသံ clone တွေနဲ့ အခမဲ့ စမ်းသုံးနိုင်ပါတယ်။</p>
+      <div class="row heroCtas">
         <button id="btnLandingLogin" class="primary" type="button">Login ဝင်မယ်</button>
         <button id="btnLandingSignup" type="button">အကောင့်သစ် ဖွင့်မယ်</button>
       </div>
@@ -235,26 +303,31 @@
 
     <section class="card">
       <h2>✨ ရနိုင်တဲ့ Feature တွေ</h2>
-      <ul class="landingList">
-        <li>Edge TTS အခမဲ့</li>
-        <li>ElevenLabs ကိုယ်ပိုင် အသံ clone</li>
-        <li>Gemini အသံ ၃၀ + အသံနေ အသံထား</li>
-        <li>F5 Clone</li>
-        <li>VoxCPM Clone (admin ဖွင့်ထားချိန်သာ)</li>
-        <li>✨ စာပြင် — ဂဏန်း/စာလုံးပေါင်း အလိုအလျောက် ပြင်</li>
-        <li>စာရှည် အလိုအလျောက် ပိုင်းထုတ်</li>
-      </ul>
-    </section>
-
-    <section class="card">
-      <h2>📖 သုံးနည်း</h2>
-      <div class="landingSteps">
-        <div>၁။ အကောင့် ဖွင့် / Login ဝင်</div>
-        <div>၂။ Edge TTS ကို တန်း သုံးနိုင် (အခမဲ့)</div>
-        <div>၃။ Pro သုံးချင်ရင် Menu ထဲမှာ ကိုယ့် API key ထည့် (သို့) Pro code သုံး</div>
-        <div>၄။ Engine ရွေး၊ စာရေး၊ "အသံ ထုတ်မယ်" နှိပ်</div>
+      <div class="featGrid">
+        <div class="featCard"><span class="featIcon">🔊</span><div><div class="featTitle">Edge TTS</div><div class="featLine">အခမဲ့</div></div></div>
+        <div class="featCard"><span class="featIcon">🎙️</span><div><div class="featTitle">ElevenLabs</div><div class="featLine">ကိုယ်ပိုင် အသံ clone</div></div></div>
+        <div class="featCard"><span class="featIcon">🎛️</span><div><div class="featTitle">Gemini</div><div class="featLine">အသံ ၃၀ + အသံနေ အသံထား</div></div></div>
+        <div class="featCard"><span class="featIcon">🧬</span><div><div class="featTitle">F5 Clone</div><div class="featLine">နမူနာ အသံကနေ clone</div></div></div>
+        <div class="featCard"><span class="featIcon">🚀</span><div><div class="featTitle">VoxCPM Clone</div><div class="featLine">(admin ဖွင့်ထားချိန်သာ)</div></div></div>
+        <div class="featCard"><span class="featIcon">✨</span><div><div class="featTitle">စာပြင်</div><div class="featLine">ဂဏန်း/စာလုံးပေါင်း အလိုအလျောက် ပြင်</div></div></div>
+        <div class="featCard"><span class="featIcon">✂️</span><div><div class="featTitle">စာပိုင်းထုတ်</div><div class="featLine">စာရှည် အလိုအလျောက် ပိုင်းထုတ်</div></div></div>
       </div>
     </section>
+
+    <section class="card stepsCard">
+      <h2>📖 သုံးနည်း</h2>
+      <div class="stepsGrid">
+        <div class="stepCard">၁။ အကောင့် ဖွင့် / Login ဝင်</div>
+        <div class="stepCard">၂။ Edge TTS ကို တန်း သုံးနိုင် (အခမဲ့)</div>
+        <div class="stepCard">၃။ Pro သုံးချင်ရင် Menu ထဲမှာ ကိုယ့် API key ထည့် (သို့) Pro code သုံး</div>
+        <div class="stepCard">၄။ Engine ရွေး၊ စာရေး၊ "အသံ ထုတ်မယ်" နှိပ်</div>
+      </div>
+    </section>
+
+    <footer class="siteFooter">
+      <div><span class="footName">🎙️ Burmese Voice TTS</span><span class="footTag">PUBLIC</span></div>
+      <div class="footLine">Edge အခမဲ့ · Pro = ကိုယ့် key (သို့) Pro code</div>
+    </footer>
   </div>
 
   <!-- ============ LOGIN (signed-out view, revealed from the landing) ============ -->
@@ -810,15 +883,78 @@ function measureDuration(blob){
 }
 
 /* ---------------- custom audio players ----------------
-   One reusable builder powers the generated-result player and the
-   compact local-file previews under each audio upload input. The real
-   playback still happens on an <audio> element, kept visually hidden;
-   the themed UI is play/pause + a slim seek slider + time text. */
+   One reusable builder powers the generated-result player, the
+   compact local-file previews under each audio upload input and the
+   landing samples. The real playback still happens on an <audio>
+   element, kept visually hidden; the themed UI is play/pause + a
+   WAVEFORM strip + time text. The strip shows the audio's real
+   amplitude peaks (decoded once per src, cached); tapping it seeks.
+   When decoding is unavailable it falls back to a fixed pseudo-wave
+   pattern — the strip still renders and still seeks by tap. */
 function fmtPlayerTime(sec){
   if (typeof sec !== "number" || !isFinite(sec) || sec < 0) sec = 0;
   sec = Math.floor(sec);
   const m = Math.floor(sec / 60), s = sec % 60;
   return m + ":" + (s < 10 ? "0" : "") + s;
+}
+const WAVE_BARS = 56;
+/* Deterministic pleasant bar pattern used until (or unless) the real
+   peaks decode. Pure function of the bar index — same every render. */
+function pseudoPeaks(n){
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i++){
+    const env = 0.45 + 0.55 * Math.sin(Math.PI * (i + 0.5) / n);
+    let v = (0.30 + 0.38 * Math.abs(Math.sin(i * 1.71)) + 0.30 * Math.abs(Math.sin(i * 0.43 + 1.3))) * env;
+    out[i] = Math.max(0.12, Math.min(1, v));
+  }
+  return out;
+}
+/* Peaks per src URL, decoded once and cached as a promise so replays
+   and re-renders never re-fetch or re-decode. Failures resolve null. */
+const _peakCache = new Map();
+let _peakCtx = null;
+function fetchPeaks(src){
+  if (!src) return Promise.resolve(null);
+  if (_peakCache.has(src)) return _peakCache.get(src);
+  if (_peakCache.size > 40) _peakCache.clear();
+  const p = (async ()=>{
+    try{
+      const resp = await fetch(src);
+      if (!resp || !resp.ok) throw new Error("peaks fetch failed");
+      const buf = await resp.arrayBuffer();
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) throw new Error("no AudioContext");
+      if (!_peakCtx) _peakCtx = new AC();
+      const audioBuf = await new Promise((res, rej)=>{
+        let pr = null;
+        try{ pr = _peakCtx.decodeAudioData(buf, res, rej); }catch(e){ rej(e); return; }
+        if (pr && pr.catch) pr.catch(rej);
+      });
+      const chans = [];
+      for (let c = 0; c < audioBuf.numberOfChannels; c++) chans.push(audioBuf.getChannelData(c));
+      const len = chans[0].length;
+      const peaks = new Float32Array(WAVE_BARS);
+      const per = Math.max(1, Math.floor(len / WAVE_BARS));
+      const stride = Math.max(1, Math.floor(per / 96));
+      for (let i = 0; i < WAVE_BARS; i++){
+        let mx = 0;
+        const start = i * per, end = Math.min(len, start + per);
+        for (let j = start; j < end; j += stride){
+          for (let c = 0; c < chans.length; c++){
+            const v = Math.abs(chans[c][j]);
+            if (v > mx) mx = v;
+          }
+        }
+        peaks[i] = mx;
+      }
+      let g = 0;
+      for (let i = 0; i < WAVE_BARS; i++) if (peaks[i] > g) g = peaks[i];
+      if (g > 0) for (let i = 0; i < WAVE_BARS; i++) peaks[i] = Math.max(0.08, peaks[i] / g);
+      return peaks;
+    }catch(e){ return null; }
+  })();
+  _peakCache.set(src, p);
+  return p;
 }
 function makePlayer(audio, mount, opts){
   opts = opts || {};
@@ -833,31 +969,50 @@ function makePlayer(audio, mount, opts){
   const btn = document.createElement("button");
   btn.type = "button"; btn.className = "apBtn"; btn.textContent = "▶";
   btn.setAttribute("aria-label", "Play/Pause");
-  const seek = document.createElement("input");
-  seek.type = "range"; seek.className = "apSeek";
-  seek.min = "0"; seek.max = "0"; seek.step = "0.1"; seek.value = "0";
-  seek.setAttribute("aria-label", "Seek");
+  const wave = document.createElement("div");
+  wave.className = "apWave";
+  wave.setAttribute("role", "slider");
+  wave.setAttribute("aria-label", "Seek");
+  const bars = [];
+  for (let i = 0; i < WAVE_BARS; i++){
+    const b = document.createElement("span");
+    b.className = "apBar";
+    wave.appendChild(b);
+    bars.push(b);
+  }
   const time = document.createElement("span");
   time.className = "apTime"; time.textContent = "0:00 / 0:00";
-  ui.appendChild(btn); ui.appendChild(seek); ui.appendChild(time);
+  ui.appendChild(btn); ui.appendChild(wave); ui.appendChild(time);
   mount.appendChild(ui);
-  let seeking = false;
+  let peaks = pseudoPeaks(WAVE_BARS);
+  let loadToken = 0;
+  const renderBars = ()=>{
+    for (let i = 0; i < WAVE_BARS; i++){
+      bars[i].style.height = Math.round(12 + peaks[i] * 88) + "%";
+    }
+  };
   const paint = ()=>{
     const cur = audio.currentTime || 0, dur = audio.duration || 0;
     const hasDur = isFinite(dur) && dur > 0;
-    if (!seeking){
-      seek.max = hasDur ? String(dur) : "0";
-      seek.value = String(hasDur ? Math.min(cur, dur) : cur);
-    }
+    const played = hasDur ? Math.round(Math.min(cur, dur) / dur * WAVE_BARS) : 0;
+    for (let i = 0; i < WAVE_BARS; i++) bars[i].classList.toggle("on", i < played);
     time.textContent = fmtPlayerTime(cur) + " / " + fmtPlayerTime(dur);
     btn.textContent = audio.paused ? "▶" : "⏸";
   };
+  const refreshPeaks = (src)=>{
+    const token = ++loadToken;
+    peaks = pseudoPeaks(WAVE_BARS);
+    renderBars(); paint();
+    if (!src) return;
+    fetchPeaks(src).then(p=>{
+      if (token !== loadToken) return;
+      if (p) { peaks = p; renderBars(); paint(); }
+    });
+  };
   const reset = ()=>{
     try{ audio.pause(); }catch(e){}
-    seeking = false;
-    seek.value = "0"; seek.max = "0";
-    time.textContent = "0:00 / 0:00";
-    btn.textContent = "▶";
+    try{ audio.currentTime = 0; }catch(e){}
+    paint();
   };
   const load = (url)=>{
     reset();
@@ -867,6 +1022,7 @@ function makePlayer(audio, mount, opts){
     } else {
       audio.removeAttribute("src");
     }
+    refreshPeaks(url || "");
     paint();
   };
   btn.addEventListener("click", ()=>{
@@ -878,23 +1034,28 @@ function makePlayer(audio, mount, opts){
     }
     paint();
   });
-  seek.addEventListener("input", ()=>{
-    const v = parseFloat(seek.value);
-    if (!isFinite(v)) return;
-    seeking = true;
-    if (isFinite(audio.duration) && audio.duration > 0){
-      try{ audio.currentTime = v; }catch(e){}
+  wave.addEventListener("click", (e)=>{
+    const rect = wave.getBoundingClientRect();
+    if (!rect || !rect.width) return;
+    let frac = (e.clientX - rect.left) / rect.width;
+    if (!isFinite(frac)) return;
+    frac = Math.max(0, Math.min(1, frac));
+    const dur = audio.duration || 0;
+    if (isFinite(dur) && dur > 0){
+      try{ audio.currentTime = frac * dur; }catch(err){}
     }
-    time.textContent = fmtPlayerTime(v) + " / " + fmtPlayerTime(audio.duration || 0);
+    paint();
   });
-  seek.addEventListener("change", ()=>{ seeking = false; paint(); });
   ["loadedmetadata","durationchange","timeupdate","play","pause","ended","emptied"].forEach(ev=>{
     audio.addEventListener(ev, ()=>{
       if (ev === "ended"){ try{ audio.pause(); }catch(e){} }
       paint();
     });
   });
+  renderBars();
   paint();
+  const initialSrc = audio.getAttribute("src") || audio.src || "";
+  if (initialSrc) refreshPeaks(initialSrc);
   return { audio: audio, load: load, reset: reset, paint: paint };
 }
 /* Attach a compact local-file preview under one audio upload input.
@@ -1831,6 +1992,7 @@ function init(){
   $("btnSignUp").addEventListener("click", signUp);
   $("btnLandingLogin").addEventListener("click", showAuthCard);
   $("btnLandingSignup").addEventListener("click", showAuthCard);
+  $("btnNavLogin").addEventListener("click", showAuthCard);
   $("btnAuthBack").addEventListener("click", backToLanding);
   $("btnGoogle").addEventListener("click", signInWithGoogle);
   initSamplePlayers();
