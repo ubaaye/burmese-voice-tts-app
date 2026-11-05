@@ -94,15 +94,15 @@
     border-top-color:#fff;border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-2px;margin-right:6px;}
   @keyframes sp{to{transform:rotate(360deg)}}
   a{color:var(--accent);}
-  /* Right slide menu (drawer) */
+  /* Left slide menu (drawer) */
   .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:59;}
   .drawer{
-    position:fixed;top:0;right:0;height:100dvh;width:82%;max-width:340px;z-index:60;
-    background:rgba(17,23,42,.97);border-left:1px solid var(--glass-border);
+    position:fixed;top:0;left:0;height:100dvh;width:82%;max-width:340px;z-index:60;
+    background:rgba(17,23,42,.97);border-right:1px solid var(--glass-border);
     backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-    box-shadow:-12px 0 32px rgba(0,0,0,.45);
+    box-shadow:12px 0 32px rgba(0,0,0,.45);
     padding:14px 12px calc(20px + env(safe-area-inset-bottom));overflow-y:auto;
-    transform:translateX(110%);visibility:hidden;
+    transform:translateX(-110%);visibility:hidden;
     transition:transform .28s ease, visibility 0s linear .28s;
   }
   .drawer.open{transform:translateX(0);visibility:visible;transition:transform .28s ease;}
@@ -112,10 +112,10 @@
 <body>
 <div class="wrap">
   <header class="top">
+    <button id="btnMenu" class="hidden" type="button" title="Menu" style="font-size:16px;line-height:1;">☰</button>
     <div class="logo">🎙️</div>
     <h1>Burmese Voice TTS</h1>
     <span class="sub">PUBLIC</span>
-    <button id="btnMenu" class="hidden" type="button" title="Menu" style="margin-left:auto;font-size:16px;line-height:1;">☰</button>
   </header>
 
   <div id="configWarn" class="warn hidden">⚠️ Supabase ချိတ်ဆက်မှု မပြင်ရသေးပါ — deploy လုပ်ချိန်တွင် ပြင်ပါမည်။ (နည်းပညာ အဖွဲ့ အတွက်: SUPABASE_URL / SUPABASE_ANON_KEY)</div>
@@ -192,8 +192,20 @@
         <div class="row">
           <select id="elVoice" style="flex:2;"><option value="">— မူလ အသံ (default) —</option></select>
           <button id="btnElVoices" type="button">အသံ စာရင်း ယူမယ်</button>
+          <button id="btnElDelete" type="button" title="ရွေးထားတဲ့ အသံ ဖျက်မယ်" disabled>🗑️</button>
         </div>
         <div class="muted">စာရင်း မယူရင် မူလ အသံနဲ့ ထုတ်ပေးပါမယ်။</div>
+        <button class="profileHead" id="elCloneToggle" type="button" style="margin-top:12px;">
+          <span>➕ အသံ အသစ် ထည့် (Clone)</span><span id="elCloneChevron">▸</span>
+        </button>
+        <div id="elCloneBody" class="hidden">
+          <label>အသံ နာမည်</label>
+          <input type="text" id="elCloneName" placeholder="ဥပမာ — ကျွန်တော့် အသံ" autocomplete="off">
+          <label>နမူနာ အသံဖိုင်</label>
+          <input type="file" id="elCloneSample" accept="audio/*">
+          <div class="muted">နမူနာ အသံဖိုင် — ၁ မိနစ် ဝန်းကျင်, ရှင်းလင်းတဲ့ အသံ က ပိုကောင်း</div>
+          <button id="btnElCloneAdd" type="button" class="primary" style="width:100%;margin-top:10px;">ထည့်မယ်</button>
+        </div>
         <div class="proLock hidden" data-prolock></div>
       </div>
 
@@ -263,7 +275,7 @@
 </div>
 
 
-<!-- ============ RIGHT SLIDE MENU (profile + user settings) ============ -->
+<!-- ============ LEFT SLIDE MENU (profile + user settings) ============ -->
 <div id="drawerBackdrop" class="backdrop hidden"></div>
 <aside id="drawer" class="drawer" aria-hidden="true">
   <div class="drawerHead">
@@ -319,6 +331,7 @@
 
       <button id="btnSaveKeys" class="primary" style="width:100%;margin-top:14px;">💾 သိမ်းမယ်</button>
       <div id="profileMsg" class="msg info"></div>
+      <div id="keysStatus" class="msg ok hidden"></div>
     </div>
   </div>
 </aside>
@@ -447,18 +460,38 @@ function logUsage(mode, chars){
 }
 
 /* ---------------- profile keys (Supabase user_keys, own row via RLS) ---------------- */
+let keysSavedAt = "";
+/* Visible proof that keys are stored on the account (shown in My Profile). */
+function renderKeysStatus(){
+  const el = $("keysStatus"); if (!el) return;
+  const has = !!(keys.el_key || keys.gemini_key || keys.hf_token || keys.pro_code);
+  if (!has){ el.classList.add("hidden"); el.textContent = ""; return; }
+  el.textContent = "✓ key သိမ်းထားပြီး" + (keysSavedAt ? " · " + new Date(keysSavedAt).toLocaleString() : "");
+  el.classList.remove("hidden");
+}
+/* In-memory reset only (sign-out / before a fresh load) — never touches the stored row. */
+function resetKeys(){
+  keys = { el_key:"", gemini_key:"", hf_token:"", pro_code:"" };
+  keysSavedAt = "";
+  $("keyEl").value = ""; $("keyGemini").value = "";
+  $("keyHf").value = ""; $("keyPro").value = "";
+  renderKeysStatus();
+}
 async function loadKeys(){
   if (!sb || !session) return;
+  resetKeys();
   try{
     const { data, error } = await sb.from("user_keys")
-      .select("el_key, gemini_key, hf_token, pro_code")
+      .select("el_key, gemini_key, hf_token, pro_code, updated_at")
       .eq("user_id", session.user.id).maybeSingle();
     if (!error && data){
       keys = { el_key:data.el_key||"", gemini_key:data.gemini_key||"", hf_token:data.hf_token||"", pro_code:data.pro_code||"" };
+      keysSavedAt = data.updated_at || "";
     }
   }catch(e){}
   $("keyEl").value = keys.el_key; $("keyGemini").value = keys.gemini_key;
   $("keyHf").value = keys.hf_token; $("keyPro").value = keys.pro_code;
+  renderKeysStatus();
   refreshProLocks();
 }
 async function saveKeys(){
@@ -473,7 +506,7 @@ async function saveKeys(){
     hf_token: keys.hf_token, pro_code: keys.pro_code, updated_at: new Date().toISOString()
   }, { onConflict: "user_id" });
   if (error) setMsg("profileMsg", "သိမ်း မရပါ: " + error.message, "err");
-  else { setMsg("profileMsg", "✅ သိမ်းပြီးပါပြီ။", "ok"); refreshProLocks(); }
+  else { keysSavedAt = new Date().toISOString(); renderKeysStatus(); setMsg("profileMsg", "✅ သိမ်းပြီးပါပြီ။", "ok"); refreshProLocks(); }
 }
 
 /* ---------------- Pro lock notices ---------------- */
@@ -487,7 +520,8 @@ function refreshProLocks(){
     if (!keys.pro_code) missing.push("Pro Code");
     if (PRO_KEY_FIELD[mode] && !keys[PRO_KEY_FIELD[mode]]) missing.push(PRO_KEY_LABEL[mode]);
     if (missing.length){
-      el.innerHTML = "🔒 ဒီ feature သုံးရန် <b>My Profile</b> မှာ " + missing.join(" နှင့် ") + " ထည့်ထားဖို့ လိုပါတယ်။";
+      el.innerHTML = "🔒 ဒီ feature သုံးရန် <b>My Profile</b> မှာ " + missing.join(" နှင့် ") + " ထည့်ထားဖို့ လိုပါတယ်။" +
+        '<br><button type="button" class="small" data-open-key-drawer style="margin-top:8px;">🔑 Key ထည့်ရန် — Menu ဖွင့်ပါ</button>';
       el.classList.remove("hidden");
     } else el.classList.add("hidden");
   });
@@ -562,7 +596,66 @@ async function loadElVoices(){
       if (id){ const o=document.createElement("option"); o.value=id; o.textContent=name; sel.appendChild(o); }
     });
     setMsg("statusMsg", "✅ အသံ "+list.length+" ခု ရပါပြီ။", "ok");
+    syncElDeleteBtn();
   }catch(e){ handleGenError(e); }
+}
+
+function syncElDeleteBtn(){ $("btnElDelete").disabled = !$("elVoice").value; }
+function elProMissing(){
+  const missing = [];
+  if (!keys.el_key) missing.push("ElevenLabs API Key");
+  if (!keys.pro_code) missing.push("Pro Code");
+  return missing;
+}
+function elProNotice(){
+  const missing = elProMissing();
+  if (!missing.length) return false;
+  setMsg("statusMsg", "🔒 ဒီ feature သုံးရန် My Profile မှာ " + missing.join(" နှင့် ") + " ထည့်ထားဖို့ လိုပါတယ်။", "err");
+  return true;
+}
+
+async function addElVoice(){
+  if (elProNotice()) return;
+  const name = $("elCloneName").value.trim();
+  const file = $("elCloneSample").files[0];
+  if (!name) return setMsg("statusMsg", "အသံ နာမည် အရင် ရေးပါ။", "err");
+  if (!file) return setMsg("statusMsg", "နမူနာ အသံဖိုင် အရင် ရွေးပါ။", "err");
+  const btn = $("btnElCloneAdd");
+  const oldLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = "ထည့်နေပါတယ်...";
+  setMsg("statusMsg", "အသံ အသစ် ထည့်နေပါတယ်...", "info"); showWake(false);
+  try{
+    const fd = new FormData();
+    fd.append("name", name);
+    fd.append("sample", file);
+    const resp = await apiFetch("/api/pub/el/voices", { method:"POST", headers: proHeaders(), body: fd });
+    if (!resp.ok) throw new Error(await apiErrorText(resp));
+    const d = await resp.json();
+    const newId = d.voice_id || d.id || "";
+    await loadElVoices();
+    if (newId) $("elVoice").value = newId;
+    syncElDeleteBtn();
+    $("elCloneName").value = ""; $("elCloneSample").value = "";
+    setMsg("statusMsg", "✅ အသံ အသစ် «" + (d.name || name) + "» ထည့်ပြီးပါပြီ။", "ok");
+  }catch(e){ handleGenError(e); }
+  btn.disabled = false; btn.textContent = oldLabel;
+}
+
+async function deleteElVoice(){
+  const vid = $("elVoice").value;
+  if (!vid) return;
+  if (elProNotice()) return;
+  if (!confirm("ဒီ အသံ ကို ဖျက်မှာ သေချာလား?")) return;
+  const btn = $("btnElDelete");
+  btn.disabled = true; showWake(false);
+  setMsg("statusMsg", "ဖျက်နေပါတယ်...", "info");
+  try{
+    const resp = await apiFetch("/api/pub/el/voices/" + encodeURIComponent(vid), { method:"DELETE", headers: proHeaders() });
+    if (!resp.ok) throw new Error(await apiErrorText(resp));
+    await loadElVoices();
+    syncElDeleteBtn();
+    setMsg("statusMsg", "✅ အသံ ဖျက်ပြီးပါပြီ။", "ok");
+  }catch(e){ handleGenError(e); syncElDeleteBtn(); }
 }
 
 async function genGemini(){
@@ -721,6 +814,17 @@ function init(){
   $("btnGenerate").addEventListener("click", generate);
   $("btnRetry").addEventListener("click", ()=>{ showWake(false); generate(); });
   $("btnElVoices").addEventListener("click", loadElVoices);
+  $("elVoice").addEventListener("change", syncElDeleteBtn);
+  $("btnElDelete").addEventListener("click", deleteElVoice);
+  $("btnElCloneAdd").addEventListener("click", addElVoice);
+  $("elCloneToggle").addEventListener("click", ()=>{
+    const body=$("elCloneBody"), open=body.classList.toggle("hidden")===false;
+    $("elCloneChevron").textContent = open ? "▾" : "▸";
+  });
+  syncElDeleteBtn();
+  document.querySelectorAll("[data-prolock]").forEach(el=>{
+    el.addEventListener("click", e=>{ if (e.target.closest("[data-open-key-drawer]")) openDrawer(); });
+  });
   $("btnSignIn").addEventListener("click", signIn);
   $("btnSignUp").addEventListener("click", signUp);
   $("btnSignOut").addEventListener("click", async ()=>{ if (sb) await sb.auth.signOut(); });
@@ -743,7 +847,7 @@ function init(){
     sb.auth.onAuthStateChange(async (_evt, sess)=>{
       session = sess;
       renderAuth();
-      if (sess) await loadKeys(); else refreshProLocks();
+      if (sess) await loadKeys(); else { resetKeys(); refreshProLocks(); }
     });
     sb.auth.getSession().then(({data})=>{
       session = data.session; renderAuth();
