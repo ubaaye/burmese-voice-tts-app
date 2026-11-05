@@ -557,6 +557,8 @@
         <div class="chipRow" id="gemStyleChips"></div>
         <input type="text" id="gemStyle" placeholder="ဥပမာ: Say cheerfully / ပျော်ပျော်ရွှင်ရွှင် ပြောပါ">
         <div class="muted" style="margin-top:4px;">Style ကို English လို ရေးမှ အသံနေအသံထား ပြောင်းပါတယ် — မြန်မာ စကားလုံး ရေးရင် အသံထဲ ဖတ်ထည့်သွားနိုင်တယ်။ အပေါ်က chip တွေ သုံးတာ အကောင်းဆုံးပါ။</div>
+        <label style="margin-top:12px;"><input type="checkbox" id="gemPerLine" style="width:auto;"> တစ်ကြောင်းချင်း ထည့်မယ်</label>
+        <div class="muted" style="margin-top:4px;">တစ်ကြောင်းချင်း ဖွင့်ထားရင် chip နှိပ်တိုင်း cursor ရှိတဲ့ ကြောင်း အစမှာ style tag ဝင်မယ်။ Tag မပါတဲ့ ကြောင်းက အပေါ်က Style အတိုင်း ထွက်မယ်။</div>
         <label style="margin-top:12px;"><input type="checkbox" id="gemDuo" style="width:auto;"> စကားပြော နှစ်ယောက် (Dialogue)</label>
         <div id="gemDuoBox" class="hidden">
           <div class="row">
@@ -816,6 +818,24 @@ const GEMINI_VOICES = ["Kore","Zephyr","Puck","Charon","Fenrir","Leda","Orus","A
   "Enceladus","Iapetus","Umbriel","Algieba","Despina","Erinome","Algenib","Rasalgethi","Laomedeia","Alnilam",
   "Schedar","Gacrux","Pulcherrima","Achird","Zubenelgenubi","Vindemiatrix","Sadachbia","Sadaltager","Sulafat","Achernar"];
 
+/* Short Burmese descriptors per studio voice: [gender, tone] — shown in the
+   picker lists as "Name · ကျား/မ · tone". The option VALUE stays the bare
+   name (the server expects it); only the visible label gains the suffix. */
+const GEMINI_VOICE_META = {
+  "Kore":["F","ခိုင်မာ"], "Zephyr":["F","တောက်ပ"], "Puck":["M","တက်ကြွ"], "Charon":["M","သတင်းဆန်ဆန်"],
+  "Fenrir":["M","စိတ်လှုပ်ရှားလွယ်"], "Leda":["F","နုပျို"], "Orus":["M","ခိုင်မာ"], "Aoede":["F","လေညင်းသာ"],
+  "Callirrhoe":["F","အေးဆေး"], "Autonoe":["F","တောက်ပ"], "Enceladus":["M","လေသံပါ"], "Iapetus":["M","ကြည်လင်"],
+  "Umbriel":["M","အေးဆေး"], "Algieba":["M","ချောမွေ့"], "Despina":["F","ချောမွေ့"], "Erinome":["F","ကြည်လင်"],
+  "Algenib":["M","အသံကြမ်း"], "Rasalgethi":["M","သတင်းဆန်ဆန်"], "Laomedeia":["F","တက်ကြွ"], "Alnilam":["M","ခိုင်မာ"],
+  "Schedar":["M","ငြိမ်သက်"], "Gacrux":["F","ရင့်ကျက်"], "Pulcherrima":["F","သွက်လက်၊ တိုက်ရိုက်"], "Achird":["M","ရင်းနှီး"],
+  "Zubenelgenubi":["M","သဘာဝ ပုံမှန်"], "Vindemiatrix":["F","နူးညံ့သိမ်မွေ့"], "Sadachbia":["M","အသက်ဝင်"],
+  "Sadaltager":["M","ပညာရှင်ဆန်ဆန်"], "Sulafat":["F","နွေးထွေး"], "Achernar":["F","နူးညံ့"]
+};
+function gemVoiceLabel(v){
+  const m = GEMINI_VOICE_META[v];
+  return m ? v + " · " + (m[0] === "M" ? "ကျား" : "မ") + " · " + m[1] : v;
+}
+
 /* Gemini tone presets: Burmese label -> English style value.
    The style MUST be English — a Burmese word here gets read aloud by the model. */
 const GEM_STYLE_PRESETS = [
@@ -834,6 +854,80 @@ const GEM_STYLE_PRESETS = [
   ["ပျင်းရိ", "bored and monotone"],
   ["ဒေါသ", "angry"]
 ];
+
+/* Concise per-line tag for each chip value — mirrors the server's
+   _gemini_style_tag output for the same English values (the server's
+   _GEMINI_EN_TAG_MAP / fallback), so a line tag and the global style
+   speak the same language. The ပုံမှန် chip ("") has no tag: in
+   per-line mode it REMOVES the current line's tag. */
+const GEM_STYLE_TAGS = {
+  "cheerful and friendly": "cheerful",
+  "calm and relaxed": "calm",
+  "warm and enthusiastic": "warm",
+  "sad and heartfelt": "sad",
+  "whispered urgently": "whispering",
+  "excited, high energy": "excited",
+  "warm storytelling": "storytelling",
+  "clear newsreader delivery": "newsreader",
+  "speaking slowly": "slow",
+  "speaking rapidly": "fast",
+  "out of breath": "out of breath",
+  "bored and monotone": "bored",
+  "angry": "angry"
+};
+/* A user tag at a line's start — same rule as the server's
+   _USER_TAG_LINE_RE: brackets of letters/spaces/hyphens only. */
+const USER_TAG_LINE_RE = /^\s*\[([A-Za-z][A-Za-z \-]{0,40})\]/;
+/* Per-line mode chip tap: tag the line holding the text cursor in
+   #gemText (replace its leading tag, or insert one). Empty tag =
+   remove the line's tag. The global #gemStyle field is NOT touched. */
+function applyPerLineStyle(tag){
+  const ta = $("gemText"); if (!ta) return;
+  const val = ta.value;
+  const prefix = tag ? "[" + tag + "] " : "";
+  if (!val){
+    if (prefix){
+      ta.value = prefix;
+      ta.dispatchEvent(new Event("input", { bubbles:true }));
+      ta.focus();
+      ta.setSelectionRange(prefix.length, prefix.length);
+    }
+    return;
+  }
+  let pos = (typeof ta.selectionStart === "number" && ta.selectionStart !== null)
+    ? ta.selectionStart : 0;
+  pos = Math.max(0, Math.min(pos, val.length));
+  const lineStart = val.lastIndexOf("\n", pos - 1) + 1;
+  /* Dialogue mode: on a "Name: ..." line the speaker prefix must stay
+     at the line start — the server only recognises a speaker there, so
+     a tag in front of it would break detection and get "Name:" spoken.
+     The tag therefore goes immediately AFTER the "Name:" prefix (and
+     its one optional space), and existing-tag detection looks at that
+     same anchor. Non-dialogue lines anchor at the line start. */
+  let anchor = lineStart;
+  const duo = $("gemDuo");
+  if (duo && duo.checked){
+    const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const names = [$("spk1Name"), $("spk2Name")]
+      .map(el => el ? el.value.trim() : "").filter(Boolean).map(esc);
+    if (names.length){
+      const pm = new RegExp("^\\s*(?:" + names.join("|") + ")\\s*:\\s?")
+        .exec(val.slice(lineStart));
+      if (pm) anchor = lineStart + pm[0].length;
+    }
+  }
+  const m = USER_TAG_LINE_RE.exec(val.slice(anchor));
+  let cut = anchor;
+  if (m){
+    cut = anchor + m[0].length;
+    if (val[cut] === " ") cut += 1;   /* also drop the separator space we add */
+  }
+  ta.value = val.slice(0, anchor) + prefix + val.slice(cut);
+  ta.dispatchEvent(new Event("input", { bubbles:true }));
+  ta.focus();
+  const cur = anchor + prefix.length;
+  ta.setSelectionRange(cur, cur);
+}
 
 /* ---------------- small helpers ---------------- */
 function setMsg(id, text, cls){
@@ -903,6 +997,15 @@ function initGemStyleChips(){
     const c = document.createElement("button");
     c.type = "button"; c.className = "chip"; c.textContent = label;
     c.addEventListener("click", ()=>{
+      const perLine = $("gemPerLine");
+      if (perLine && perLine.checked){
+        /* Per-line mode: tag the cursor's line in #gemText instead of
+           setting the global style. The "" (ပုံမှန်) chip removes the
+           line's tag. Active-chip highlighting is left as-is: the tap
+           edited the text, not the global style. */
+        applyPerLineStyle(GEM_STYLE_TAGS[value] || "");
+        return;
+      }
       input.value = value;
       row.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));
       c.classList.add("active");
@@ -1645,6 +1748,8 @@ function resetPane(mode){
     setSel("spk2Voice", "Puck");
     const duo = $("gemDuo");
     if (duo && duo.checked){ duo.checked = false; duo.dispatchEvent(new Event("change", { bubbles:true })); }
+    const perLine = $("gemPerLine");
+    if (perLine) perLine.checked = false;
   } else if (mode === "f5"){
     setRange("f5Speed", "1");                   /* markup value="1" */
   }
@@ -2832,7 +2937,7 @@ function registerServiceWorker(){
 function fillGeminiVoices(){
   ["gemVoice","spk1Voice","spk2Voice"].forEach(id=>{
     const sel=$(id); sel.innerHTML="";
-    GEMINI_VOICES.forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=v; sel.appendChild(o); });
+    GEMINI_VOICES.forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=gemVoiceLabel(v); sel.appendChild(o); });
     sel.value = "Kore";
     syncSelectButton(id);
   });
