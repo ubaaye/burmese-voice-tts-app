@@ -24,24 +24,28 @@
     font-weight:400;font-style:normal;font-display:swap;}
   @font-face{font-family:"Padauk Web";src:url("padauk-bold.woff2") format("woff2");
     font-weight:700;font-style:normal;font-display:swap;}
-  /* Liquid Glass theme (V44) — DECISIVE live-test pass. A test page
-     with bold diagonal stripes + a dot grid proved backdrop-filter
-     works in a real browser: bold stripes stayed clearly visible
-     through blur(12px) (softened), while the fine dots were blurred
-     out COMPLETELY. So the app's scene features were simply too weak
-     to read through any real blur — 1.2px dots at .10 alpha and soft
-     glows vanish. The sample concept works because its light flows
-     are BOLD and WIDE. Fix: (1) the scene's thin ribbons are now three
-     WIDE flowing light bands (150–180px tall, bright core
-     rgba(255,176,84,.50)) crossing the viewport at ~8% / ~48% / ~82%
-     heights; dots stay only as a subtle outside-panel texture.
-     (2) Glass blur 10px -> 6px (saturate 130% kept) so the bands read
-     clearly through panels.
-     History: V43 cascade-hunt pass found the cascade already clean
-     (every panel surface's ONLY background is the --glassfill sheen;
-     no legacy override, no inline/JS paint), deleted the
-     .heroCard::before in-panel amber overlay, and neutralised the
-     inset amber bottom-glow in the big surfaces' box-shadows. */
+  /* Liquid Glass theme (V45) — ROOT CAUSE FOUND by a live bisect
+     test: a test page replicating this app's exact structure, run in
+     a real browser, proved that background features painted as the
+     BODY element's own background show through every glass panel,
+     blurred — even in nested and overflow:hidden panels — while
+     features painted on a fixed, z-index:-1 ::before / ::after
+     pseudo layer are NOT sampled by backdrop-filter AT ALL: they
+     stay invisible inside panels even where they pass directly
+     behind them. The whole scene lived on those pseudo layers,
+     which is why V40–V44 all failed despite a clean cascade.
+     Fix: the entire scene (the former ::after streak as an
+     equivalent radial-gradient layer, the dots, the three wide
+     light bands, the four soft glows) is now painted as the body
+     element's OWN background with background-attachment:fixed, and
+     the pseudo rules are removed entirely.
+     Kept from V44: three WIDE flowing light bands (150–180px tall,
+     bright core rgba(255,176,84,.50)) crossing the viewport at
+     ~8% / ~48% / ~82% heights — an earlier live test proved only
+     bold, wide features survive backdrop blur (fine 1.2px dots
+     blur out completely and remain only as a subtle outside-panel
+     texture) — and glass blur 6px (saturate 130%) so the bands
+     read clearly through the panels. */
   :root{
     --glass: rgba(255,255,255,.07);
     --glassfill: linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,.015) 45%, rgba(255,255,255,.04));
@@ -56,18 +60,21 @@
   body{
     font-family:"Padauk Web","Segoe UI",system-ui,-apple-system,"Myanmar Text",sans-serif;
     color:var(--txt); min-height:100vh;
-    background:#0a0a0b;
-  }
-  /* The lit scene behind the glass (fixed layer, below all content):
-     three WIDE flowing light bands crossing the full viewport width
-     (a rotated bright-core strip, ~150–180px tall on a phone, at ~8% /
-     ~48% / ~82% viewport height) over large soft amber glows on
-     neutral near-black. The V44 live test proved only bold, wide
-     features survive backdrop blur — the fine dots are kept solely as
-     a subtle texture on the open background between panels. */
-  body::before{
-    content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    /* The lit scene IS the body background (V45 — see the theme note
+       above: the panels' backdrop-filter samples the body element's
+       own background; fixed pseudo layers are not sampled at all).
+       Layer stack, top first: the soft top streak (the former
+       ::after ellipse with its own rotate/blur dropped — same
+       colours and stops as an equivalent radial-gradient: radii
+       82.5vw x 32.4vh, centred at 50% / 21vh), the dot grid, three
+       WIDE flowing light bands crossing the full viewport width
+       (bright core rgba(255,176,84,.50), ~150–180px tall, centred
+       at ~8% / ~48% / ~82% viewport height), then four large soft
+       amber glows — all over the neutral near-black base #0a0a0b.
+       background-attachment:fixed pins the bands to their viewport
+       heights while scrolling, matching the old fixed layer. */
     background:
+      radial-gradient(ellipse 82.5vw 32.4vh at 50% 21vh, rgba(255,165,55,.30), rgba(255,150,40,.12) 55%, transparent 75%),
       radial-gradient(rgba(255,255,255,.10) 1.2px, transparent 1.8px),
       linear-gradient(172deg, transparent calc(8% - 80px), rgba(255,176,84,.16) calc(8% - 50px), rgba(255,176,84,.50) 8%, rgba(255,176,84,.16) calc(8% + 50px), transparent calc(8% + 80px)),
       linear-gradient(175deg, transparent calc(48% - 90px), rgba(255,176,84,.15) calc(48% - 58px), rgba(255,176,84,.50) 48%, rgba(255,176,84,.15) calc(48% + 58px), transparent calc(48% + 90px)),
@@ -75,13 +82,10 @@
       radial-gradient(720px 520px at 10% 2%, rgba(255,150,40,.45), transparent 65%),
       radial-gradient(840px 620px at 108% 42%, rgba(255,150,40,.20), transparent 65%),
       radial-gradient(780px 580px at -6% 94%, rgba(255,160,50,.22), transparent 65%),
-      radial-gradient(460px 320px at 84% 14%, rgba(255,196,107,.16), transparent 60%);
-    background-size:22px 22px, auto, auto, auto, auto, auto, auto, auto;
-  }
-  body::after{
-    content:"";position:fixed;left:-25%;width:150%;top:3%;height:36vh;z-index:-1;pointer-events:none;
-    background:radial-gradient(ellipse 55% 90% at 50% 50%, rgba(255,165,55,.30), rgba(255,150,40,.12) 55%, transparent 75%);
-    transform:rotate(-7deg);filter:blur(10px);
+      radial-gradient(460px 320px at 84% 14%, rgba(255,196,107,.16), transparent 60%)
+      #0a0a0b;
+    background-size:auto, 22px 22px, auto, auto, auto, auto, auto, auto, auto;
+    background-attachment:fixed;
   }
   .wrap{max-width:1080px;margin:0 auto;padding:18px 16px 48px;}
   header.top{display:flex;align-items:center;gap:10px;padding:10px 14px;margin-bottom:16px;
