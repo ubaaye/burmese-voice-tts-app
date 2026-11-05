@@ -24,20 +24,24 @@
     font-weight:400;font-style:normal;font-display:swap;}
   @font-face{font-family:"Padauk Web";src:url("padauk-bold.woff2") format("woff2");
     font-weight:700;font-style:normal;font-display:swap;}
-  /* Liquid Glass theme (V43) — cascade-hunt pass. Findings: the cascade
-     was already clean (every panel surface's ONLY background is the
-     --glassfill sheen; no legacy override, no inline/JS paint). The
-     opacity the user saw was optical + two in-panel tints, all fixed:
-     (1) blur 22px erased the 22px-period dot grid and homogenised the
-     ribbons into a brown wash, and saturate(160%) — applied TWICE on
-     surfaces nested inside .card — browned the amber; glass is now
-     blur(10px) saturate(130%), close to the concept image's clarity.
-     (2) .heroCard::before painted an amber glow OVER the hero's glass —
-     deleted; the scene behind the glass is the decoration now.
-     (3) The inset amber bottom-glow in the big surfaces' box-shadows
-     tinted panels from inside — neutralised to white.
-     Scene dots strengthened (.05->.10 alpha) so the grain survives
-     the lighter blur and stays visible through the panels. */
+  /* Liquid Glass theme (V44) — DECISIVE live-test pass. A test page
+     with bold diagonal stripes + a dot grid proved backdrop-filter
+     works in a real browser: bold stripes stayed clearly visible
+     through blur(12px) (softened), while the fine dots were blurred
+     out COMPLETELY. So the app's scene features were simply too weak
+     to read through any real blur — 1.2px dots at .10 alpha and soft
+     glows vanish. The sample concept works because its light flows
+     are BOLD and WIDE. Fix: (1) the scene's thin ribbons are now three
+     WIDE flowing light bands (150–180px tall, bright core
+     rgba(255,176,84,.50)) crossing the viewport at ~8% / ~48% / ~82%
+     heights; dots stay only as a subtle outside-panel texture.
+     (2) Glass blur 10px -> 6px (saturate 130% kept) so the bands read
+     clearly through panels.
+     History: V43 cascade-hunt pass found the cascade already clean
+     (every panel surface's ONLY background is the --glassfill sheen;
+     no legacy override, no inline/JS paint), deleted the
+     .heroCard::before in-panel amber overlay, and neutralised the
+     inset amber bottom-glow in the big surfaces' box-shadows. */
   :root{
     --glass: rgba(255,255,255,.07);
     --glassfill: linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,.015) 45%, rgba(255,255,255,.04));
@@ -55,19 +59,20 @@
     background:#0a0a0b;
   }
   /* The lit scene behind the glass (fixed layer, below all content):
-     a fine dot texture over neutral near-black, large soft amber glows,
-     and BRIGHT light ribbons (near-solid amber cores) crossing the
-     viewport at ~15% / ~55% / ~85% heights — soft glows alone blur
-     away to a brown wash, so the sample's sharp light shapes are what
-     actually read through frosted glass at any scroll position. */
+     three WIDE flowing light bands crossing the full viewport width
+     (a rotated bright-core strip, ~150–180px tall on a phone, at ~8% /
+     ~48% / ~82% viewport height) over large soft amber glows on
+     neutral near-black. The V44 live test proved only bold, wide
+     features survive backdrop blur — the fine dots are kept solely as
+     a subtle texture on the open background between panels. */
   body::before{
     content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
     background:
       radial-gradient(rgba(255,255,255,.10) 1.2px, transparent 1.8px),
-      linear-gradient(172deg, transparent 9%, rgba(255,170,60,.10) 12.5%, rgba(255,205,120,.55) 15%, rgba(255,170,60,.20) 17.5%, transparent 21%),
-      linear-gradient(168deg, transparent 47%, rgba(255,170,60,.08) 51%, rgba(255,200,110,.50) 55%, rgba(255,170,60,.15) 59%, transparent 64%),
-      linear-gradient(175deg, transparent 77%, rgba(255,170,60,.08) 81.5%, rgba(255,200,110,.45) 85%, rgba(255,170,60,.13) 88.5%, transparent 93%),
-      radial-gradient(720px 520px at 10% 2%, rgba(255,150,40,.38), transparent 65%),
+      linear-gradient(172deg, transparent calc(8% - 80px), rgba(255,176,84,.16) calc(8% - 50px), rgba(255,176,84,.50) 8%, rgba(255,176,84,.16) calc(8% + 50px), transparent calc(8% + 80px)),
+      linear-gradient(175deg, transparent calc(48% - 90px), rgba(255,176,84,.15) calc(48% - 58px), rgba(255,176,84,.50) 48%, rgba(255,176,84,.15) calc(48% + 58px), transparent calc(48% + 90px)),
+      linear-gradient(169deg, transparent calc(82% - 75px), rgba(255,176,84,.16) calc(82% - 48px), rgba(255,176,84,.50) 82%, rgba(255,176,84,.16) calc(82% + 48px), transparent calc(82% + 75px)),
+      radial-gradient(720px 520px at 10% 2%, rgba(255,150,40,.45), transparent 65%),
       radial-gradient(840px 620px at 108% 42%, rgba(255,150,40,.20), transparent 65%),
       radial-gradient(780px 580px at -6% 94%, rgba(255,160,50,.22), transparent 65%),
       radial-gradient(460px 320px at 84% 14%, rgba(255,196,107,.16), transparent 60%);
@@ -81,14 +86,14 @@
   .wrap{max-width:1080px;margin:0 auto;padding:18px 16px 48px;}
   header.top{display:flex;align-items:center;gap:10px;padding:10px 14px;margin-bottom:16px;
     background:var(--glassfill);border:1px solid var(--glass-border);border-radius:14px;
-    backdrop-filter:blur(10px) saturate(130%);-webkit-backdrop-filter:blur(10px) saturate(130%);
+    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),inset 0 -18px 30px -18px rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.45);}
   header.top .logo{font-size:26px;}
   header.top h1{font-size:19px;margin:0;font-weight:700;letter-spacing:.2px;}
   header.top .sub{font-size:11px;color:#241300;background:var(--gold);border-radius:20px;padding:2px 8px;font-weight:700;}
   .card{
     background:var(--glassfill);border:1px solid var(--glass-border);border-radius:var(--radius);
-    backdrop-filter:blur(10px) saturate(130%);-webkit-backdrop-filter:blur(10px) saturate(130%);
+    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
     padding:14px;margin-bottom:12px;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),inset 0 -18px 30px -18px rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.45);
   }
@@ -118,7 +123,7 @@
   .errField{border-color:#f87171 !important;}
   .fieldErr{flex:0 0 100%;width:100%;color:#f87171;font-size:12.5px;line-height:1.5;margin-top:6px;}
   .msg.err{color:var(--danger);} .msg.ok{color:var(--ok);} .msg.info{color:var(--muted);}
-  .warn{background:var(--glassfill);backdrop-filter:blur(10px) saturate(130%);-webkit-backdrop-filter:blur(10px) saturate(130%);
+  .warn{background:var(--glassfill);backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),0 10px 24px rgba(0,0,0,.35);
     border:1px solid rgba(255,159,46,.45);color:var(--gold);
     border-radius:10px;padding:9px 11px;font-size:12.5px;margin-bottom:12px;line-height:1.55;}
@@ -136,7 +141,7 @@
     background:linear-gradient(135deg,#6fe3a5,#34c759);padding:2px 7px;border-radius:20px;}
   .badgeBeta{position:absolute;top:7px;right:8px;font-size:10px;font-weight:800;color:#fff8ee;
     background:rgba(255,255,255,.16);padding:2px 7px;border-radius:20px;}
-  .proLock{background:var(--glassfill);backdrop-filter:blur(10px) saturate(130%);-webkit-backdrop-filter:blur(10px) saturate(130%);
+  .proLock{background:var(--glassfill);backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03);
     border:1px dashed rgba(255,159,46,.45);color:#ffd9a0;
     border-radius:10px;padding:9px 11px;font-size:12.5px;line-height:1.6;margin-top:10px;}
@@ -196,7 +201,7 @@
   .audioPlayer.compact .apCtl .apTime{min-width:0;}
   /* Generation history (IndexedDB-backed) */
   .histRow{background:var(--glassfill);border:1px solid var(--glass-border);border-radius:12px;
-    backdrop-filter:blur(10px) saturate(130%);-webkit-backdrop-filter:blur(10px) saturate(130%);
+    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),0 10px 24px rgba(0,0,0,.35);
     padding:10px 12px;margin-top:10px;}
   .histHead{display:flex;justify-content:space-between;gap:8px;font-size:13.5px;font-weight:600;}
@@ -219,13 +224,13 @@
   .keyRow .eye{flex:0 0 auto;padding:9px 10px;}
   .profileHead{width:100%;text-align:left;font-weight:700;font-size:15px;display:flex;justify-content:space-between;align-items:center;}
   .notice{background:var(--glassfill);border:1px solid var(--glass-border);border-radius:10px;
-    backdrop-filter:blur(10px) saturate(130%);-webkit-backdrop-filter:blur(10px) saturate(130%);
+    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),0 10px 24px rgba(0,0,0,.35);
     padding:9px 11px;font-size:12.5px;line-height:1.65;margin-top:10px;color:#f3e9da;}
   /* Landing view (signed-out first impression: samples + features + how-to) */
   .landingPitch{font-size:14.5px;line-height:1.65;margin:4px 0 12px;}
   .sampleRow{background:var(--glassfill);border:1px solid var(--glass-border);border-radius:12px;
-    backdrop-filter:blur(10px) saturate(130%);-webkit-backdrop-filter:blur(10px) saturate(130%);
+    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),0 10px 24px rgba(0,0,0,.35);
     padding:10px 12px;margin-top:10px;}
   .sampleRow:first-of-type{margin-top:2px;}
@@ -255,7 +260,7 @@
   .loadPop{position:fixed;inset:0;z-index:75;display:flex;align-items:center;justify-content:center;
     padding:20px;background:rgba(8,8,10,.55);}
   .loadPopCard{background:var(--glassfill);border:1px solid var(--glass-border);border-radius:18px;
-    backdrop-filter:blur(10px) saturate(130%);-webkit-backdrop-filter:blur(10px) saturate(130%);
+    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),inset 0 -18px 30px -18px rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.45);padding:22px 24px 18px;max-width:min(88vw,360px);
     text-align:center;}
   .loadWave{display:flex;gap:3px;justify-content:center;align-items:center;height:30px;}
@@ -290,7 +295,7 @@
   .pickBtn .badgePro,.pickBtn .badgeFree,.pickBtn .badgeBeta{position:static;flex:0 0 auto;}
   /* Bottom-sheet pop-ups (pickers + settings) */
   .sheet{position:fixed;left:0;right:0;bottom:0;z-index:81;max-width:560px;margin:0 auto;
-    background:var(--glassfill);backdrop-filter:blur(10px) saturate(130%);-webkit-backdrop-filter:blur(10px) saturate(130%);border:1px solid var(--glass-border);border-bottom:none;
+    background:var(--glassfill);backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);border:1px solid var(--glass-border);border-bottom:none;
     border-radius:18px 18px 0 0;padding:14px 14px calc(16px + env(safe-area-inset-bottom));
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),inset 0 -18px 30px -18px rgba(255,255,255,.05),0 -18px 40px rgba(0,0,0,.45);max-height:84dvh;display:flex;flex-direction:column;
     transform:translateY(110%);visibility:hidden;transition:transform .28s ease, visibility 0s linear .28s;}
@@ -311,7 +316,7 @@
   .drawer{
     position:fixed;top:0;left:0;height:100dvh;width:82%;max-width:340px;z-index:60;
     background:var(--glassfill);border-right:1px solid var(--glass-border);
-    backdrop-filter:blur(10px) saturate(130%);-webkit-backdrop-filter:blur(10px) saturate(130%);
+    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),inset 0 -18px 30px -18px rgba(255,255,255,.05),18px 0 40px rgba(0,0,0,.45);
     padding:14px 12px calc(20px + env(safe-area-inset-bottom));overflow-y:auto;
     transform:translateX(-110%);visibility:hidden;
@@ -322,7 +327,7 @@
   /* ===== Website shell (landing nav / hero / grids / footer) ===== */
   .siteNav{position:sticky;top:0;z-index:50;display:none;
     background:var(--glassfill);border-bottom:1px solid var(--glass-border);
-    backdrop-filter:blur(10px) saturate(130%);-webkit-backdrop-filter:blur(10px) saturate(130%);
+    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),inset 0 -18px 30px -18px rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.45);}
   body:has(#appArea.hidden) .siteNav{display:block;}
   .navIn{max-width:1080px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:9px;}
@@ -339,14 +344,14 @@
   .featGrid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:6px;}
   .featCard{display:flex;gap:11px;align-items:flex-start;background:var(--glassfill);
     border:1px solid var(--glass-border);border-radius:12px;padding:11px 12px;
-    backdrop-filter:blur(10px) saturate(130%);-webkit-backdrop-filter:blur(10px) saturate(130%);
+    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),0 10px 24px rgba(0,0,0,.35);}
   .featIcon{font-size:19px;line-height:1.3;flex:0 0 auto;}
   .featTitle{font-weight:700;font-size:14px;line-height:1.4;}
   .featLine{font-size:12.5px;color:var(--muted);line-height:1.55;margin-top:1px;}
   .stepsGrid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:6px;}
   .stepCard{background:var(--glassfill);border:1px solid var(--glass-border);border-radius:12px;
-    backdrop-filter:blur(10px) saturate(130%);-webkit-backdrop-filter:blur(10px) saturate(130%);
+    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),0 10px 24px rgba(0,0,0,.35);
     padding:12px;font-size:13.5px;line-height:1.7;}
   .stepCard b{color:var(--accent);}
