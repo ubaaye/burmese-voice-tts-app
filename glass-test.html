@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glass test</title>
+<style>
+  body{margin:0;min-height:100vh;font-family:sans-serif;color:#fff;
+    background:
+      radial-gradient(rgba(255,255,255,.55) 2px, transparent 2.6px) 0 0/26px 26px,
+      repeating-linear-gradient(45deg, #ffb340 0 34px, #120c06 34px 68px, #ff5f2e 68px 102px, #120c06 102px 136px),
+      #120c06;}
+  .panel{margin:26px;padding:22px;border-radius:16px;border:1px solid rgba(255,255,255,.5);font-size:15px}
+  .a{background:transparent;backdrop-filter:blur(0px);-webkit-backdrop-filter:blur(0px)}
+  .b{background:rgba(255,255,255,.07);backdrop-filter:blur(12px) saturate(140%);-webkit-backdrop-filter:blur(12px) saturate(140%)}
+  .c{background:rgba(255,255,255,.07)}
+  h1{font-size:17px;margin:14px 26px 0}
+</style></head><body>
+<h1>Glass rendering test — the page background has bold diagonal amber/orange stripes and a grid of white dots.</h1>
+<div class="panel a">PANEL A — fully transparent fill + backdrop blur(0). Question: are the stripes and dots visible inside this panel, crisp?</div>
+<div class="panel b">PANEL B — white 7% fill + backdrop blur(12px). Question: are the stripes and dots visible inside this panel, blurred/softened?</div>
+<div class="panel c">PANEL C — white 7% fill, NO backdrop filter (control). Question: are the stripes and dots visible inside this panel, crisp?</div>
+</body></html>
