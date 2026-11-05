@@ -181,6 +181,7 @@
           <input type="range" id="edgePitch" min="-50" max="50" step="5" value="0">
           <span class="sliderVal" id="edgePitchVal">0 Hz</span>
         </div>
+        <div class="proLock hidden" data-prolock></div>
       </div>
 
       <!-- ELEVENLABS pane -->
@@ -364,6 +365,7 @@ function isOwner(){
   return !!(session && session.user && (session.user.email || "").toLowerCase() === OWNER_EMAIL);
 }
 let keys = { el_key:"", gemini_key:"", hf_token:"", pro_code:"" };
+let disabledModes = [];             // modes the admin disabled for this user (user_controls.disabled_modes)
 let currentMode = "edge";
 let lastObjectUrl = null;
 
@@ -460,12 +462,35 @@ function proHeaders(extra){
 }
 
 /* ---------------- usage logging (fire-and-forget) ---------------- */
-function logUsage(mode, chars){
+function logUsage(mode, chars, seconds){
   try{
     if (!sb || !session) return;
-    sb.from("usage_log").insert({ user_id: session.user.id, mode: mode, chars: chars })
+    const secs = (typeof seconds === "number" && isFinite(seconds) && seconds > 0)
+      ? Math.round(seconds * 10) / 10 : 0;
+    sb.from("usage_log").insert({ user_id: session.user.id, mode: mode, chars: chars, duration_seconds: secs })
       .then(()=>{}, ()=>{});
   }catch(e){}
+}
+/* Measure a blob's audio duration in seconds (1 decimal); 0 when unknown. */
+function measureDuration(blob){
+  return new Promise((resolve)=>{
+    let url = null, done = false;
+    const finish = (v)=>{
+      if (done) return; done = true;
+      clearTimeout(timer);
+      if (url) URL.revokeObjectURL(url);
+      resolve((typeof v === "number" && isFinite(v) && v > 0) ? Math.round(v * 10) / 10 : 0);
+    };
+    const timer = setTimeout(()=>finish(0), 3000);
+    try{
+      url = URL.createObjectURL(blob);
+      const audio = new Audio();
+      audio.preload = "metadata";
+      audio.onloadedmetadata = ()=>finish(audio.duration);
+      audio.onerror = ()=>finish(0);
+      audio.src = url;
+    }catch(e){ finish(0); }
+  });
 }
 
 /* ---------------- profile keys (Supabase user_keys, own row via RLS) ---------------- */
@@ -481,6 +506,7 @@ function renderKeysStatus(){
 /* In-memory reset only (sign-out / before a fresh load) — never touches the stored row. */
 function resetKeys(){
   keys = { el_key:"", gemini_key:"", hf_token:"", pro_code:"" };
+  disabledModes = [];
   keysSavedAt = "";
   $("keyEl").value = ""; $("keyGemini").value = "";
   $("keyHf").value = ""; $("keyPro").value = "";
@@ -501,6 +527,21 @@ async function loadKeys(){
   $("keyEl").value = keys.el_key; $("keyGemini").value = keys.gemini_key;
   $("keyHf").value = keys.hf_token; $("keyPro").value = keys.pro_code;
   renderKeysStatus();
+  refreshProLocks();
+}
+/* Per-user TTS controls: modes the admin disabled for this account.
+   Read-own via RLS; any error/missing table just means "nothing disabled". */
+async function loadControls(){
+  disabledModes = [];
+  if (!sb || !session) { refreshProLocks(); return; }
+  try{
+    const { data, error } = await sb.from("user_controls")
+      .select("disabled_modes")
+      .eq("user_id", session.user.id).maybeSingle();
+    if (!error && data && Array.isArray(data.disabled_modes)){
+      disabledModes = data.disabled_modes.filter(m => ["edge","el","gemini","f5"].includes(m));
+    }
+  }catch(e){ disabledModes = []; }
   refreshProLocks();
 }
 async function saveKeys(){
@@ -525,6 +566,11 @@ function refreshProLocks(){
   document.querySelectorAll("[data-prolock]").forEach(el => {
     const pane = el.closest(".modePane"); if (!pane) return;
     const mode = pane.id.replace("pane-","");
+    if (disabledModes.includes(mode)){
+      el.textContent = "⛔ ဒီ TTS ကို admin က ပိတ်ထားပါတယ်။";
+      el.classList.remove("hidden");
+      return;
+    }
     const missing = [];
     if (!keys.pro_code && !isOwner()) missing.push("Pro Code");
     if (PRO_KEY_FIELD[mode] && !keys[PRO_KEY_FIELD[mode]]) missing.push(PRO_KEY_LABEL[mode]);
@@ -536,7 +582,8 @@ function refreshProLocks(){
   });
   const proMode = ["el","gemini","f5"].includes(currentMode);
   const codeOk = !!keys.pro_code || isOwner();
-  $("btnGenerate").disabled = proMode && (!codeOk || (PRO_KEY_FIELD[currentMode] && !keys[PRO_KEY_FIELD[currentMode]]));
+  $("btnGenerate").disabled = disabledModes.includes(currentMode) ||
+    (proMode && (!codeOk || (PRO_KEY_FIELD[currentMode] && !keys[PRO_KEY_FIELD[currentMode]])));
 }
 
 /* ---------------- result ---------------- */
@@ -551,11 +598,12 @@ async function showResult(blob, mode, chars, ext){
   a.download = "burmese-tts-" + mode + (processed.type.includes("wav") ? ".wav" : (ext||".mp3"));
   $("resultBox").classList.remove("hidden");
   setMsg("statusMsg", "✅ အသံ ရပါပြီ။", "ok");
-  logUsage(mode, chars);
+  logUsage(mode, chars, await measureDuration(processed));
 }
 
 /* ---------------- generators ---------------- */
 async function genEdge(){
+  if (disabledModes.includes("edge")) return setMsg("statusMsg", "⛔ ဒီ TTS ကို admin က ပိတ်ထားပါတယ်။", "err");
   const text = $("edgeText").value.trim();
   if (!text) return setMsg("statusMsg", "စာသား အရင် ရေးပါ။", "err");
   if (text.length > 600) return setMsg("statusMsg", "စာသား ၆၀၀ လုံး ထက် ကျော်နေပါတယ် — လျှော့ရေးပါ။", "err");
@@ -576,6 +624,7 @@ async function genEdge(){
 }
 
 async function genEl(){
+  if (disabledModes.includes("el")) return setMsg("statusMsg", "⛔ ဒီ TTS ကို admin က ပိတ်ထားပါတယ်။", "err");
   const text = $("elText").value.trim();
   if (!text) return setMsg("statusMsg", "စာသား အရင် ရေးပါ။", "err");
   busy(true); showWake(false);
@@ -669,6 +718,7 @@ async function deleteElVoice(){
 }
 
 async function genGemini(){
+  if (disabledModes.includes("gemini")) return setMsg("statusMsg", "⛔ ဒီ TTS ကို admin က ပိတ်ထားပါတယ်။", "err");
   const text = $("gemText").value.trim();
   if (!text) return setMsg("statusMsg", "စာသား အရင် ရေးပါ။", "err");
   busy(true); showWake(false);
@@ -692,6 +742,7 @@ async function genGemini(){
 }
 
 async function genF5(){
+  if (disabledModes.includes("f5")) return setMsg("statusMsg", "⛔ ဒီ TTS ကို admin က ပိတ်ထားပါတယ်။", "err");
   const text = $("f5Text").value.trim();
   const refText = $("f5RefText").value.trim();
   const file = $("f5Ref").files[0];
@@ -858,11 +909,12 @@ function init(){
     sb.auth.onAuthStateChange(async (_evt, sess)=>{
       session = sess;
       renderAuth();
-      if (sess) await loadKeys(); else { resetKeys(); refreshProLocks(); }
+      if (sess){ await loadKeys(); await loadControls(); }
+      else { resetKeys(); refreshProLocks(); }
     });
-    sb.auth.getSession().then(({data})=>{
+    sb.auth.getSession().then(async ({data})=>{
       session = data.session; renderAuth();
-      if (session) loadKeys();
+      if (session){ await loadKeys(); await loadControls(); }
     });
   }
   refreshProLocks();
