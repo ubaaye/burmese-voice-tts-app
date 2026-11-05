@@ -73,6 +73,8 @@
     background:linear-gradient(135deg,var(--gold),#ffb52e);padding:2px 7px;border-radius:20px;}
   .badgeFree{position:absolute;top:7px;right:8px;font-size:10px;font-weight:800;color:#062b18;
     background:linear-gradient(135deg,#6fe3a5,#34c759);padding:2px 7px;border-radius:20px;}
+  .badgeBeta{position:absolute;top:7px;right:8px;font-size:10px;font-weight:800;color:#1b1035;
+    background:linear-gradient(135deg,#c4a7ff,#8b6ff0);padding:2px 7px;border-radius:20px;}
   .proLock{background:rgba(255,207,77,.12);border:1px dashed rgba(255,207,77,.55);color:#ffe1a1;
     border-radius:10px;padding:9px 11px;font-size:12.5px;line-height:1.6;margin-top:10px;}
   .counter{font-size:11.5px;color:var(--muted);text-align:right;margin-top:3px;}
@@ -93,6 +95,16 @@
   .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);
     border-top-color:#fff;border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-2px;margin-right:6px;}
   @keyframes sp{to{transform:rotate(360deg)}}
+  /* Gemini style preset chips */
+  .chipRow{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px;}
+  .chip{padding:5px 11px;font-size:12.5px;border-radius:20px;line-height:1.4;}
+  .chip.active{border-color:var(--accent);background:rgba(77,163,255,.22);color:#fff;}
+  /* Indeterminate loading bar (shown while generating) */
+  .loadBar{position:sticky;top:4px;z-index:70;height:3px;border-radius:3px;overflow:hidden;
+    background:rgba(255,255,255,.08);margin:0 2px 4px;}
+  .loadBar .fill{position:absolute;top:0;left:0;height:100%;width:40%;border-radius:3px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));animation:loadSlide 1.1s ease-in-out infinite;}
+  @keyframes loadSlide{0%{left:-40%}100%{left:100%}}
   a{color:var(--accent);}
   /* Left slide menu (drawer) */
   .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:59;}
@@ -117,6 +129,7 @@
     <h1>Burmese Voice TTS</h1>
     <span class="sub">PUBLIC</span>
   </header>
+  <div id="loadBar" class="loadBar hidden"><div class="fill"></div></div>
 
   <div id="configWarn" class="warn hidden">⚠️ Supabase ချိတ်ဆက်မှု မပြင်ရသေးပါ — deploy လုပ်ချိန်တွင် ပြင်ပါမည်။ (နည်းပညာ အဖွဲ့ အတွက်: SUPABASE_URL / SUPABASE_ANON_KEY)</div>
 
@@ -125,7 +138,7 @@
     <h2>🔐 Login ဝင်ပါ</h2>
     <p class="muted">ဒီ app ကို သုံးရန် အကောင့် ဝင်ထားရပါမယ်။<br>
     • <b>Edge TTS</b> — login ဝင်ပြီးရင် <b>အခမဲ့</b> သုံးနိုင်ပါတယ်။<br>
-    • <b>ElevenLabs / Gemini / F5 Clone</b> — <b>Pro</b> feature များ: ကိုယ့် API key ကိုယ် + Pro code လိုပါတယ်။</p>
+    • <b>ElevenLabs / Gemini / F5 Clone</b> — <b>Pro</b> feature များ: ကိုယ့် API key ထည့်ရင် code မလိုပါ။ Pro code ရှိရင် owner ရဲ့ key နဲ့ သုံးနိုင်ပါတယ်။</p>
     <label>Email</label>
     <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com">
     <label>Password</label>
@@ -159,12 +172,17 @@
           <span class="t">F5 Clone</span><span class="d">နမူနာ အသံကနေ clone</span>
           <span class="badgePro proBadge">🔒 PRO</span>
         </button>
+        <button class="modeTab" data-mode="vox">
+          <span class="t">VoxCPM Clone</span><span class="d">နမူနာ အသံကနေ clone (Kaggle)</span>
+          <span class="badgeBeta">BETA</span>
+        </button>
       </div>
 
       <!-- EDGE pane -->
       <div class="modePane" id="pane-edge">
         <label>စာသား</label>
         <textarea id="edgeText" placeholder="အသံ ပြောင်းချင်တဲ့ မြန်မာ စာသား ရေးပါ...">မင်္ဂလာပါ ရှင်။ ဒီနေ့ အကြောင်းလေး ပြောပြချင်လို့ပါ။</textarea>
+        <div style="margin-top:6px;"><button type="button" class="small" data-fix="edgeText">✨ စာပြင်</button></div>
         <div class="counter" id="edgeCounter"></div>
         <label>အသံ</label>
         <select id="edgeVoice">
@@ -188,6 +206,7 @@
       <div class="modePane hidden" id="pane-el">
         <label>စာသား</label>
         <textarea id="elText" placeholder="ElevenLabs clone အသံနဲ့ ပြောမယ့် စာသား...">မင်္ဂလာပါ။ ကျွန်တော့် အသံနဲ့ ပြောနေတာပါ။</textarea>
+        <div style="margin-top:6px;"><button type="button" class="small" data-fix="elText">✨ စာပြင်</button></div>
         <div class="counter" id="elCounter"></div>
         <label>အသံ (Voice)</label>
         <div class="row">
@@ -214,11 +233,14 @@
       <div class="modePane hidden" id="pane-gemini">
         <label>စာသား</label>
         <textarea id="gemText" placeholder="Gemini အသံနဲ့ ပြောမယ့် စာသား...">မင်္ဂလာပါ ရှင်။ ဒီနေ့ အကြောင်းလေး ပြောပြချင်လို့ပါ။</textarea>
+        <div style="margin-top:6px;"><button type="button" class="small" data-fix="gemText">✨ စာပြင်</button></div>
         <div class="counter" id="gemCounter"></div>
         <label>အသံ (Studio voice)</label>
         <select id="gemVoice"></select>
         <label>ပြောဟန် (Style) — မဖြစ်မနေ မလိုပါ</label>
+        <div class="chipRow" id="gemStyleChips"></div>
         <input type="text" id="gemStyle" placeholder="ဥပမာ: Say cheerfully / ပျော်ပျော်ရွှင်ရွှင် ပြောပါ">
+        <div class="muted" style="margin-top:4px;">Style ကို English လို ရေးမှ အသံနေအသံထား ပြောင်းပါတယ် — မြန်မာ စကားလုံး ရေးရင် အသံထဲ ဖတ်ထည့်သွားနိုင်တယ်။ အပေါ်က chip တွေ သုံးတာ အကောင်းဆုံးပါ။</div>
         <label style="margin-top:12px;"><input type="checkbox" id="gemDuo" style="width:auto;"> စကားပြော နှစ်ယောက် (Dialogue)</label>
         <div id="gemDuoBox" class="hidden">
           <div class="row">
@@ -251,6 +273,20 @@
         <div class="proLock hidden" data-prolock></div>
       </div>
 
+      <!-- VOXCPM CLONE pane (Beta — server-side session, admin on/off switch) -->
+      <div class="modePane hidden" id="pane-vox">
+        <div id="voxStatus" class="msg info">🔒 VoxCPM ကို admin က ပိတ်ထားပါတယ် — ဖွင့်ထားတဲ့ အချိန်မှ သုံးလို့ရပါမယ်</div>
+        <label>နမူနာ အသံဖိုင် (clone လုပ်မယ့် အသံ)</label>
+        <input type="file" id="voxRef" accept="audio/*">
+        <label>နမူနာ အသံထဲက စာသား (အတိအကျ)</label>
+        <textarea id="voxRefText" style="min-height:48px;" placeholder="နမူနာ အသံထဲမှာ ပြောထားတဲ့ စာသား အတိအကျ ရေးပါ"></textarea>
+        <label>ပြောမယ့် စာသား</label>
+        <textarea id="voxText" placeholder="clone အသံနဲ့ ပြောမယ့် စာသား...">မင်္ဂလာပါ ခင်ဗျား။ ဒီနေ့ ရာသီဥတု သာယာတယ်နော်။</textarea>
+        <div style="margin-top:6px;"><button type="button" class="small" data-fix="voxText">✨ စာပြင်</button></div>
+        <div class="counter" id="voxCounter"></div>
+        <div class="proLock hidden" data-prolock></div>
+      </div>
+
       <!-- Shared volume -->
       <div class="volRow">
         <span style="font-size:13px;">🔊 အသံအတိုး</span>
@@ -271,7 +307,7 @@
       </div>
     </div>
 
-    <p class="muted" style="text-align:center;">Edge TTS = အခမဲ့ · Pro feature များ = ကိုယ့် key + Pro code</p>
+    <p class="muted" style="text-align:center;">Edge TTS = အခမဲ့ · Pro feature များ = ကိုယ့် key (သို့) Pro code</p>
   </div>
 </div>
 
@@ -331,7 +367,7 @@
         <input type="password" id="keyPro" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
         <button class="eye" type="button" data-eye="keyPro">👁️</button>
       </div>
-      <div class="muted">Pro feature တွေ (ElevenLabs / Gemini / F5) သုံးရန် Pro code လိုပါတယ်။ မရှိရင် app ပိုင်ရှင်ထံ တောင်းပါ။</div>
+      <div class="muted">Pro code ရှိရင် ကိုယ့် key မထည့်ဘဲ owner ရဲ့ key နဲ့ Pro feature တွေ သုံးနိုင်ပါတယ်။ ကိုယ့် key ထည့်ထားရင် code မလိုပါ။</div>
 
       <button id="btnSaveKeys" class="primary" style="width:100%;margin-top:14px;">💾 သိမ်းမယ်</button>
       <div id="profileMsg" class="msg info"></div>
@@ -373,13 +409,51 @@ const GEMINI_VOICES = ["Kore","Zephyr","Puck","Charon","Fenrir","Leda","Orus","A
   "Enceladus","Iapetus","Umbriel","Algieba","Despina","Erinome","Algenib","Rasalgethi","Laomedeia","Alnilam",
   "Schedar","Gacrux","Pulcherrima","Achird","Zubenelgenubi","Vindemiatrix","Sadachbia","Sadaltager","Sulafat","Achernar"];
 
+/* Gemini tone presets: Burmese label -> English style value.
+   The style MUST be English — a Burmese word here gets read aloud by the model. */
+const GEM_STYLE_PRESETS = [
+  ["ပုံမှန် (မလို)", ""],
+  ["ရွှင်လန်း", "cheerful and friendly"],
+  ["တည်ငြိမ်", "calm and relaxed"],
+  ["နွေးထွေး", "warm and enthusiastic"],
+  ["ဝမ်းနည်း ထိရှ", "sad and heartfelt"],
+  ["တိုးတိုး အရေးတကြီး", "whispered urgently"],
+  ["စိတ်လှုပ်ရှား", "excited, high energy"],
+  ["ပုံပြင်", "warm storytelling"],
+  ["သတင်း", "clear newsreader delivery"],
+  ["နှေးနှေး", "speaking slowly"],
+  ["မြန်မြန်", "speaking rapidly"],
+  ["မောပန်း", "out of breath"],
+  ["ပျင်းရိ", "bored and monotone"],
+  ["ဒေါသ", "angry"]
+];
+
 /* ---------------- small helpers ---------------- */
 function setMsg(id, text, cls){ const el=$(id); el.textContent=text||""; el.className="msg "+(cls||"info"); }
 function busy(on, label){
   const b=$("btnGenerate"); b.disabled=on;
   b.innerHTML = on ? '<span class="spin"></span>'+(label||"ထုတ်နေပါတယ်...") : "🔊 အသံ ထုတ်မယ်";
+  $("loadBar").classList.toggle("hidden", !on);
+  if (on) setMsg("statusMsg", label || "⏳ အသံ ထုတ်နေပါတယ် — ခဏ စောင့်ပါ…", "info");
 }
 function showWake(on){ $("wakeBox").classList.toggle("hidden", !on); if(on) setMsg("statusMsg",""); }
+/* Build the Gemini style preset chips: click -> English style into #gemStyle.
+   A manual edit of the input clears the active chip. */
+function initGemStyleChips(){
+  const row = $("gemStyleChips"), input = $("gemStyle");
+  if (!row || !input) return;
+  GEM_STYLE_PRESETS.forEach(([label, value])=>{
+    const c = document.createElement("button");
+    c.type = "button"; c.className = "chip"; c.textContent = label;
+    c.addEventListener("click", ()=>{
+      input.value = value;
+      row.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));
+      c.classList.add("active");
+    });
+    row.appendChild(c);
+  });
+  input.addEventListener("input", ()=> row.querySelectorAll(".chip").forEach(x=>x.classList.remove("active")));
+}
 function bindCounter(textId, counterId, cap){
   const t=$(textId), c=$(counterId); if(!t||!c) return;
   const upd=()=>{ const n=t.value.length; c.textContent = cap ? (n+" / "+cap+" လုံး") : (n+" လုံး");
@@ -452,12 +526,34 @@ async function apiErrorText(resp){
     return d.detail || d.message || d.error || ("အမှား "+resp.status);
   }catch(e){ return "အမှား "+resp.status; }
 }
-function proHeaders(extra){
+/* Per-engine Pro auth (new access model — the server mirrors this contract):
+   a Pro request is authorized by ANY of:
+   (a) the visitor's OWN key for that engine  -> send ONLY that key header, no code;
+   (b) a valid Pro Code and NO own key        -> send ONLY X-Pro-Code (owner's keys used);
+   (c) the owner login                        -> send neither (owner's keys used). */
+const PRO_ENGINE_KEY    = { el:"el_key", gemini:"gemini_key", f5:"hf_token" };
+const PRO_ENGINE_HEADER = { el:"X-EL-Key", gemini:"X-Gemini-Key", f5:"X-HF-Token" };
+const PRO_LOCKED_TEXT = "🔒 ကိုယ့် API Key ထည့်ရင် code မလိုဘဲ သုံးလို့ရပါတယ် — ဒါမှမဟုတ် Pro Code ထည့်ရင် owner ရဲ့ key နဲ့ သုံးလို့ရပါတယ်";
+function proUnlocked(engine){
+  if (isOwner()) return true;
+  const field = PRO_ENGINE_KEY[engine];
+  if (field && keys[field]) return true;
+  return !!keys.pro_code;
+}
+/* How an engine is unlocked: "own" (own key) | "owner" | "code" (owner key via code) | "" */
+function unlockVia(engine){
+  const field = PRO_ENGINE_KEY[engine];
+  if (field && keys[field]) return "own";
+  if (isOwner()) return "owner";
+  if (keys.pro_code) return "code";
+  return "";
+}
+function proHeadersFor(engine, extra){
   const h = {};
-  if (keys.el_key)     h["X-EL-Key"] = keys.el_key;
-  if (keys.gemini_key) h["X-Gemini-Key"] = keys.gemini_key;
-  if (keys.hf_token)   h["X-HF-Token"] = keys.hf_token;
-  if (keys.pro_code)   h["X-Pro-Code"] = keys.pro_code;
+  const field = PRO_ENGINE_KEY[engine];
+  const ownKey = field ? (keys[field] || "") : "";
+  if (ownKey) h[PRO_ENGINE_HEADER[engine]] = ownKey;
+  else if (keys.pro_code && !isOwner()) h["X-Pro-Code"] = keys.pro_code;
   return Object.assign(h, extra||{});
 }
 
@@ -539,9 +635,56 @@ async function loadControls(){
       .select("disabled_modes")
       .eq("user_id", session.user.id).maybeSingle();
     if (!error && data && Array.isArray(data.disabled_modes)){
-      disabledModes = data.disabled_modes.filter(m => ["edge","el","gemini","f5"].includes(m));
+      disabledModes = data.disabled_modes.filter(m => ["edge","el","gemini","f5","vox"].includes(m));
     }
   }catch(e){ disabledModes = []; }
+  refreshProLocks();
+}
+/* ---------------- VoxCPM (Beta) availability ----------------
+   The session lives server-side (Kaggle); the client only asks the server:
+   enabled = the admin's global VoxCPM switch (owner always counts as on),
+   available = a session URL is configured server-side. */
+let voxStatus = { enabled:false, available:false, loaded:false };
+function renderVoxStatus(){
+  const el = $("voxStatus"); if (!el) return;
+  if (!voxStatus.enabled){
+    el.textContent = "🔒 VoxCPM ကို admin က ပိတ်ထားပါတယ် — ဖွင့်ထားတဲ့ အချိန်မှ သုံးလို့ရပါမယ်";
+    el.className = "msg err";
+  } else if (!voxStatus.available){
+    el.textContent = "⏳ VoxCPM session မရှိသေးပါ — နောက်မှ ပြန်စမ်းပါ";
+    el.className = "msg info";
+  } else {
+    el.textContent = "✅ သုံးလို့ရပါတယ်";
+    el.className = "msg ok";
+  }
+}
+/* Like apiFetch, but a 503 response is returned (not turned into a WakeError)
+   so the vox routes' own {"detail": "..."} (e.g. session not available) shows. */
+async function voxFetch(path, opts){
+  opts = opts || {};
+  const headers = Object.assign({}, opts.headers||{}, await authHeader());
+  let resp;
+  try{
+    resp = await fetch(PUBLIC_API + path, Object.assign({}, opts, { headers }));
+  }catch(e){ throw new WakeError("network"); }
+  if (resp.status === 502) throw new WakeError("http 502");
+  return resp;
+}
+async function loadVoxStatus(){
+  if (!session){
+    voxStatus = { enabled:false, available:false, loaded:false };
+    renderVoxStatus(); refreshProLocks(); return;
+  }
+  try{
+    const resp = await apiFetch("/api/pub/vox/status", { method:"GET" });
+    if (resp.ok){
+      const j = await resp.json();
+      voxStatus = { enabled: !!j.enabled, available: !!j.available, loaded:true };
+    } else {
+      voxStatus = { enabled:false, available:false, loaded:true };
+    }
+  }catch(e){ /* server asleep/network — keep last known state */ }
+  renderVoxStatus();
   refreshProLocks();
 }
 async function saveKeys(){
@@ -560,10 +703,12 @@ async function saveKeys(){
 }
 
 /* ---------------- Pro lock notices ---------------- */
-const PRO_KEY_FIELD = { el:"el_key", gemini:"gemini_key", f5:"hf_token" };
-const PRO_KEY_LABEL = { el:"ElevenLabs API Key", gemini:"Gemini API Key", f5:"HuggingFace Token" };
 function refreshProLocks(){
-  document.querySelectorAll(".proBadge").forEach(b=>{ b.textContent = isOwner() ? "PRO" : "🔒 PRO"; });
+  /* Badges are per-mode: unlocked (own key / Pro Code / owner) -> "PRO", else "🔒 PRO". */
+  document.querySelectorAll(".modeTab").forEach(tab=>{
+    const badge = tab.querySelector(".proBadge"); if (!badge) return;
+    badge.textContent = proUnlocked(tab.dataset.mode) ? "PRO" : "🔒 PRO";
+  });
   document.querySelectorAll("[data-prolock]").forEach(el => {
     const pane = el.closest(".modePane"); if (!pane) return;
     const mode = pane.id.replace("pane-","");
@@ -572,19 +717,22 @@ function refreshProLocks(){
       el.classList.remove("hidden");
       return;
     }
-    const missing = [];
-    if (!keys.pro_code && !isOwner()) missing.push("Pro Code");
-    if (PRO_KEY_FIELD[mode] && !keys[PRO_KEY_FIELD[mode]]) missing.push(PRO_KEY_LABEL[mode]);
-    if (missing.length){
-      el.innerHTML = "🔒 ဒီ feature သုံးရန် <b>My Profile</b> မှာ " + missing.join(" နှင့် ") + " ထည့်ထားဖို့ လိုပါတယ်။" +
+    if (!["el","gemini","f5"].includes(mode)){ el.classList.add("hidden"); return; }
+    if (!proUnlocked(mode)){
+      el.innerHTML = PRO_LOCKED_TEXT +
         '<br><button type="button" class="small" data-open-key-drawer style="margin-top:8px;">🔑 Key ထည့်ရန် — Menu ဖွင့်ပါ</button>';
       el.classList.remove("hidden");
-    } else el.classList.add("hidden");
+      return;
+    }
+    const via = unlockVia(mode);
+    if (via === "own"){ el.textContent = "🔑 ကိုယ့် key နဲ့ သုံးနေပါတယ်"; el.classList.remove("hidden"); }
+    else if (via === "code"){ el.textContent = "👑 Pro Code နဲ့ owner key ကို သုံးနေပါတယ်"; el.classList.remove("hidden"); }
+    else el.classList.add("hidden");
   });
   const proMode = ["el","gemini","f5"].includes(currentMode);
-  const codeOk = !!keys.pro_code || isOwner();
+  const voxBlocked = currentMode === "vox" && !(voxStatus.enabled && voxStatus.available);
   $("btnGenerate").disabled = disabledModes.includes(currentMode) ||
-    (proMode && (!codeOk || (PRO_KEY_FIELD[currentMode] && !keys[PRO_KEY_FIELD[currentMode]])));
+    (proMode && !proUnlocked(currentMode)) || voxBlocked;
 }
 
 /* ---------------- result ---------------- */
@@ -606,6 +754,72 @@ async function showResult(blob, mode, chars, ext){
 /* Edge has no length cap in the app: the server accepts ~600 chars per
    request, so long texts are split at sentence boundaries into <=550-char
    chunks, synthesized sequentially, and stitched back into one WAV. */
+/* Long-text chunk sizes for the Pro engines (Edge uses 550 inline). */
+const EL_CHUNK_MAX = 800;
+const GEM_CHUNK_MAX = 550;
+
+/* ===== FIX_VOICE_TEXT_BEGIN ===== */
+/* "✨ စာပြင်": prepare textarea text for Burmese TTS —
+   (a) numbers -> Burmese words, (b) written forms -> spoken forms. */
+const MM_DIGIT_WORDS = ["သုည","တစ်","နှစ်","သုံး","လေး","ငါး","ခြောက်","ခုနစ်","ရှစ်","ကိုး"];
+const MM_DIGITS = "၀၁၂၃၄၅၆၇၈၉";
+/* Integer 1..999,999 by decimal places (သိန်း/သောင်း/ထောင်/ရာ/ဆယ်).
+   Junction forms ဆယ့်/ရာ့/ထောင့် when a lower non-zero part follows;
+   a tens digit of 1 with a unit after it drops its တစ် (11 = ဆယ့်တစ်). */
+function mmBelowMillion(n){
+  const places = [[100000,"သိန်း","သိန်း"],[10000,"သောင်း","သောင်း"],[1000,"ထောင်","ထောင့်"],[100,"ရာ","ရာ့"],[10,"ဆယ်","ဆယ့်"]];
+  let out = "", rest = n;
+  for (const [val, name, joined] of places){
+    const d = Math.floor(rest / val);
+    if (!d) continue;
+    rest -= d * val;
+    const followed = rest > 0;
+    if (val === 10 && d === 1 && followed) out += joined;
+    else out += MM_DIGIT_WORDS[d] + (followed ? joined : name);
+  }
+  if (rest > 0) out += MM_DIGIT_WORDS[rest];
+  return out;
+}
+/* Integer 0..999,999,999 (သန်း takes a 1..999 multiplier). */
+function mmIntToWords(n){
+  if (n === 0) return MM_DIGIT_WORDS[0];
+  let out = "";
+  const millions = Math.floor(n / 1000000), rem = n % 1000000;
+  if (millions) out += mmBelowMillion(millions) + "သန်း";
+  if (rem) out += mmBelowMillion(rem);
+  return out;
+}
+function mmDigitByDigit(digits){
+  return digits.split("").map(c => MM_DIGIT_WORDS[+c]).join(" ");
+}
+/* One number token (ASCII or Burmese digits, optional "," separators, optional ".frac").
+   Phone-like strings (leading 0, 7+ digits, no separators) and anything past
+   999,999,999 fall back to digit-by-digit words. */
+function mmNumberToken(token){
+  const norm = token.replace(/[၀-၉]/g, c => String(MM_DIGITS.indexOf(c)));
+  const clean = norm.replace(/,/g, "");
+  const dot = clean.indexOf(".");
+  const intDigits = dot >= 0 ? clean.slice(0, dot) : clean;
+  const fracDigits = dot >= 0 ? clean.slice(dot + 1) : "";
+  const phoneLike = !norm.includes(",") && /^0/.test(intDigits) && intDigits.length >= 7;
+  let words;
+  if (phoneLike || intDigits.length > 9) words = mmDigitByDigit(intDigits);
+  else words = mmIntToWords(parseInt(intDigits, 10) || 0);
+  if (fracDigits) words += "ဒသမ" + fracDigits.split("").map(c => MM_DIGIT_WORDS[+c]).join("");
+  return words;
+}
+const SPOKEN_FORMS = [
+  ["ကျွန်တော်","ကျတော်"], ["ကျွန်မ","ကျမ"], ["သူငယ်ချင်း","သယ်ငယ်ချင်း"],
+  ["ညီမလေး","ညီမှလေး"], ["ဒဿဂိရိ","ဒတ်သဂိရိ"], ["ဒဿရထ","ဒတ်သရထ"]
+];
+function fixVoiceText(str){
+  let out = String(str || "");
+  for (const [from, to] of SPOKEN_FORMS) out = out.split(from).join(to);
+  out = out.replace(/(?<![0-9A-Za-z၀-၉])[0-9၀-၉][0-9၀-၉,]*(?:\.[0-9၀-၉]+)?/g, mmNumberToken);
+  return out;
+}
+/* ===== FIX_VOICE_TEXT_END ===== */
+
 function splitSentences(text){
   const out = []; let cur = "";
   for (const ch of text){
@@ -695,26 +909,44 @@ async function genEdge(){
 
 async function genEl(){
   if (disabledModes.includes("el")) return setMsg("statusMsg", "⛔ ဒီ TTS ကို admin က ပိတ်ထားပါတယ်။", "err");
+  if (!proUnlocked("el")) return setMsg("statusMsg", PRO_LOCKED_TEXT, "err");
   const text = $("elText").value.trim();
   if (!text) return setMsg("statusMsg", "စာသား အရင် ရေးပါ။", "err");
   if (!$("elVoice").value) return setMsg("statusMsg", "အသံ အရင် ရွေးပါ။", "err");
   busy(true); showWake(false);
   try{
-    const body = { text, voice_id: $("elVoice").value, model_id: "eleven_v4" };
-    const resp = await apiFetch("/api/pub/el/tts", {
-      method:"POST", headers: proHeaders({ "Content-Type":"application/json" }),
-      body: JSON.stringify(body)
-    });
-    if (!resp.ok) throw new Error(await apiErrorText(resp));
-    showResult(await resp.blob(), "el", text.length, ".mp3");
+    const voice_id = $("elVoice").value;
+    const fetchChunk = async (t)=>{
+      const resp = await apiFetch("/api/pub/el/tts", {
+        method:"POST", headers: proHeadersFor("el", { "Content-Type":"application/json" }),
+        body: JSON.stringify({ text: t, voice_id, model_id: "eleven_v4" })
+      });
+      if (!resp.ok) throw new Error(await apiErrorText(resp));
+      return await resp.blob();
+    };
+    if (text.length <= EL_CHUNK_MAX){
+      showResult(await fetchChunk(text), "el", text.length, ".mp3");
+    } else {
+      const chunks = splitEdgeText(text, EL_CHUNK_MAX);
+      const ctx = audioCtx();
+      const bufs = [];
+      for (let i = 0; i < chunks.length; i++){
+        setMsg("statusMsg", "အပိုင်း " + (i+1) + "/" + chunks.length + " ထုတ်နေပါတယ်...", "info");
+        const blob = await fetchChunk(chunks[i]);
+        bufs.push(await ctx.decodeAudioData(await blob.arrayBuffer()));
+      }
+      const wav = concatAudioBuffers(ctx, bufs);
+      if (ctx.close) ctx.close();
+      showResult(wav, "el", text.length, ".wav");
+    }
   }catch(e){ handleGenError(e); }
   busy(false);
 }
 async function loadElVoices(){
-  if (!keys.el_key) return setMsg("statusMsg", "My Profile မှာ ElevenLabs API Key အရင် ထည့်ပါ။", "err");
+  if (elProNotice()) return;
   setMsg("statusMsg", "အသံ စာရင်း ယူနေပါတယ်...", "info");
   try{
-    const resp = await apiFetch("/api/pub/el/voices", { headers: proHeaders() });
+    const resp = await apiFetch("/api/pub/el/voices", { headers: proHeadersFor("el") });
     if (!resp.ok) throw new Error(await apiErrorText(resp));
     const d = await resp.json();
     const list = Array.isArray(d) ? d : (d.voices || []);
@@ -740,16 +972,9 @@ async function loadElVoices(){
 }
 
 function syncElDeleteBtn(){ $("btnElDelete").disabled = !$("elVoice").value; }
-function elProMissing(){
-  const missing = [];
-  if (!keys.el_key) missing.push("ElevenLabs API Key");
-  if (!keys.pro_code && !isOwner()) missing.push("Pro Code");
-  return missing;
-}
 function elProNotice(){
-  const missing = elProMissing();
-  if (!missing.length) return false;
-  setMsg("statusMsg", "🔒 ဒီ feature သုံးရန် My Profile မှာ " + missing.join(" နှင့် ") + " ထည့်ထားဖို့ လိုပါတယ်။", "err");
+  if (proUnlocked("el")) return false;
+  setMsg("statusMsg", PRO_LOCKED_TEXT, "err");
   return true;
 }
 
@@ -767,7 +992,7 @@ async function addElVoice(){
     const fd = new FormData();
     fd.append("name", name);
     fd.append("sample", file);
-    const resp = await apiFetch("/api/pub/el/voices", { method:"POST", headers: proHeaders(), body: fd });
+    const resp = await apiFetch("/api/pub/el/voices", { method:"POST", headers: proHeadersFor("el"), body: fd });
     if (!resp.ok) throw new Error(await apiErrorText(resp));
     const d = await resp.json();
     const newId = d.voice_id || d.id || "";
@@ -790,7 +1015,7 @@ async function deleteElVoice(){
   btn.disabled = true; showWake(false);
   setMsg("statusMsg", "ဖျက်နေပါတယ်...", "info");
   try{
-    const resp = await apiFetch("/api/pub/el/voices/" + encodeURIComponent(vid), { method:"DELETE", headers: proHeaders() });
+    const resp = await apiFetch("/api/pub/el/voices/" + encodeURIComponent(vid), { method:"DELETE", headers: proHeadersFor("el") });
     if (!resp.ok) throw new Error(await apiErrorText(resp));
     await loadElVoices();
     syncElDeleteBtn();
@@ -800,30 +1025,52 @@ async function deleteElVoice(){
 
 async function genGemini(){
   if (disabledModes.includes("gemini")) return setMsg("statusMsg", "⛔ ဒီ TTS ကို admin က ပိတ်ထားပါတယ်။", "err");
+  if (!proUnlocked("gemini")) return setMsg("statusMsg", PRO_LOCKED_TEXT, "err");
   const text = $("gemText").value.trim();
   if (!text) return setMsg("statusMsg", "စာသား အရင် ရေးပါ။", "err");
   busy(true); showWake(false);
   try{
-    const body = { text, voice: $("gemVoice").value };
-    const style = $("gemStyle").value.trim(); if (style) body.style = style;
-    if ($("gemDuo").checked){
-      const n1=$("spk1Name").value.trim(), n2=$("spk2Name").value.trim();
-      if (n1 && n2) body.speakers = [
-        { speaker:n1, voice:$("spk1Voice").value }, { speaker:n2, voice:$("spk2Voice").value }
-      ];
+    const makeBody = (t)=>{
+      const body = { text: t, voice: $("gemVoice").value };
+      const style = $("gemStyle").value.trim(); if (style) body.style = style;
+      if ($("gemDuo").checked){
+        const n1=$("spk1Name").value.trim(), n2=$("spk2Name").value.trim();
+        if (n1 && n2) body.speakers = [
+          { speaker:n1, voice:$("spk1Voice").value }, { speaker:n2, voice:$("spk2Voice").value }
+        ];
+      }
+      return body;
+    };
+    const fetchChunk = async (t)=>{
+      const resp = await apiFetch("/api/pub/gemini/tts", {
+        method:"POST", headers: proHeadersFor("gemini", { "Content-Type":"application/json" }),
+        body: JSON.stringify(makeBody(t))
+      });
+      if (!resp.ok) throw new Error(await apiErrorText(resp));
+      return await resp.blob();
+    };
+    if (text.length <= GEM_CHUNK_MAX){
+      showResult(await fetchChunk(text), "gemini", text.length, ".wav");
+    } else {
+      const chunks = splitEdgeText(text, GEM_CHUNK_MAX);
+      const ctx = audioCtx();
+      const bufs = [];
+      for (let i = 0; i < chunks.length; i++){
+        setMsg("statusMsg", "အပိုင်း " + (i+1) + "/" + chunks.length + " ထုတ်နေပါတယ်...", "info");
+        const blob = await fetchChunk(chunks[i]);
+        bufs.push(await ctx.decodeAudioData(await blob.arrayBuffer()));
+      }
+      const wav = concatAudioBuffers(ctx, bufs);
+      if (ctx.close) ctx.close();
+      showResult(wav, "gemini", text.length, ".wav");
     }
-    const resp = await apiFetch("/api/pub/gemini/tts", {
-      method:"POST", headers: proHeaders({ "Content-Type":"application/json" }),
-      body: JSON.stringify(body)
-    });
-    if (!resp.ok) throw new Error(await apiErrorText(resp));
-    showResult(await resp.blob(), "gemini", text.length, ".wav");
   }catch(e){ handleGenError(e); }
   busy(false);
 }
 
 async function genF5(){
   if (disabledModes.includes("f5")) return setMsg("statusMsg", "⛔ ဒီ TTS ကို admin က ပိတ်ထားပါတယ်။", "err");
+  if (!proUnlocked("f5")) return setMsg("statusMsg", PRO_LOCKED_TEXT, "err");
   const text = $("f5Text").value.trim();
   const refText = $("f5RefText").value.trim();
   const file = $("f5Ref").files[0];
@@ -835,7 +1082,7 @@ async function genF5(){
     const fd = new FormData();
     fd.append("text", text); fd.append("ref_text", refText);
     fd.append("speed", $("f5Speed").value); fd.append("ref_audio", file);
-    const resp = await apiFetch("/api/pub/clone/jobs", { method:"POST", headers: proHeaders(), body: fd });
+    const resp = await apiFetch("/api/pub/clone/jobs", { method:"POST", headers: proHeadersFor("f5"), body: fd });
     if (!resp.ok) throw new Error(await apiErrorText(resp));
     const job = await resp.json();
     const jobId = job.job_id || job.id;
@@ -844,12 +1091,12 @@ async function genF5(){
     const deadline = Date.now() + 5*60*1000;
     while (Date.now() < deadline){
       await new Promise(r=>setTimeout(r, 3000));
-      const pr = await apiFetch("/api/pub/clone/jobs/" + encodeURIComponent(jobId), { headers: proHeaders() });
+      const pr = await apiFetch("/api/pub/clone/jobs/" + encodeURIComponent(jobId), { headers: proHeadersFor("f5") });
       if (!pr.ok) throw new Error(await apiErrorText(pr));
       const st = await pr.json();
       const status = (st.status || st.state || "").toLowerCase();
       if (["done","completed","complete","success","succeeded"].includes(status)){
-        const ar = await apiFetch("/api/pub/clone/jobs/" + encodeURIComponent(jobId) + "/audio", { headers: proHeaders() });
+        const ar = await apiFetch("/api/pub/clone/jobs/" + encodeURIComponent(jobId) + "/audio", { headers: proHeadersFor("f5") });
         if (!ar.ok) throw new Error(await apiErrorText(ar));
         showResult(await ar.blob(), "f5", text.length, ".wav");
         busy(false); return;
@@ -862,13 +1109,35 @@ async function genF5(){
   busy(false);
 }
 
+async function genVox(){
+  if (disabledModes.includes("vox")) return setMsg("statusMsg", "⛔ ဒီ TTS ကို admin က ပိတ်ထားပါတယ်။", "err");
+  if (!voxStatus.enabled) return setMsg("statusMsg", "🔒 VoxCPM ကို admin က ပိတ်ထားပါတယ် — ဖွင့်ထားတဲ့ အချိန်မှ သုံးလို့ရပါမယ်", "err");
+  if (!voxStatus.available) return setMsg("statusMsg", "⏳ VoxCPM session မရှိသေးပါ — နောက်မှ ပြန်စမ်းပါ", "err");
+  const text = $("voxText").value.trim();
+  const refText = $("voxRefText").value.trim();
+  const file = $("voxRef").files[0];
+  if (!file) return setMsg("statusMsg", "နမူနာ အသံဖိုင် အရင် ရွေးပါ။", "err");
+  if (!refText) return setMsg("statusMsg", "နမူနာ အသံထဲက စာသား ရေးပါ။", "err");
+  if (!text) return setMsg("statusMsg", "ပြောမယ့် စာသား ရေးပါ။", "err");
+  busy(true); showWake(false);
+  try{
+    const fd = new FormData();
+    fd.append("text", text); fd.append("ref_text", refText); fd.append("ref_audio", file);
+    const resp = await voxFetch("/api/pub/vox/tts", { method:"POST", body: fd });
+    if (!resp.ok) throw new Error(await apiErrorText(resp));
+    showResult(await resp.blob(), "vox", text.length, ".wav");
+  }catch(e){ handleGenError(e); }
+  busy(false);
+  refreshProLocks();
+}
+
 function handleGenError(e){
   if (e instanceof WakeError){ showWake(true); return; }
   showWake(false);
   setMsg("statusMsg", "❌ " + (e && e.message ? e.message : "တစ်ခုခု မှားနေပါတယ်။"), "err");
 }
 function generate(){
-  ({ edge:genEdge, el:genEl, gemini:genGemini, f5:genF5 })[currentMode]();
+  ({ edge:genEdge, el:genEl, gemini:genGemini, f5:genF5, vox:genVox })[currentMode]();
 }
 
 /* ---------------- auth ---------------- */
@@ -923,10 +1192,12 @@ function fillGeminiVoices(){
 }
 function init(){
   fillGeminiVoices();
+  initGemStyleChips();
   bindCounter("edgeText","edgeCounter",0);
   bindCounter("elText","elCounter",0);
   bindCounter("gemText","gemCounter",0);
   bindCounter("f5Text","f5Counter",0);
+  bindCounter("voxText","voxCounter",0);
 
   document.querySelectorAll(".modeTab").forEach(btn=>{
     btn.addEventListener("click", ()=>{
@@ -937,6 +1208,7 @@ function init(){
       $("pane-"+currentMode).classList.remove("hidden");
       setMsg("statusMsg",""); showWake(false);
       refreshProLocks();
+      if (currentMode === "vox") loadVoxStatus();
     });
   });
 
@@ -965,6 +1237,14 @@ function init(){
     $("elCloneChevron").textContent = open ? "▾" : "▸";
   });
   syncElDeleteBtn();
+  document.querySelectorAll("[data-fix]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const ta = $(b.dataset.fix); if (!ta) return;
+      ta.value = fixVoiceText(ta.value);
+      ta.dispatchEvent(new Event("input", { bubbles:true }));
+      setMsg("statusMsg", "✨ စာပြင်ပြီးပါပြီ", "ok");
+    });
+  });
   document.querySelectorAll("[data-prolock]").forEach(el=>{
     el.addEventListener("click", e=>{ if (e.target.closest("[data-open-key-drawer]")) openDrawer(); });
   });
@@ -990,12 +1270,12 @@ function init(){
     sb.auth.onAuthStateChange(async (_evt, sess)=>{
       session = sess;
       renderAuth();
-      if (sess){ await loadKeys(); await loadControls(); }
-      else { resetKeys(); refreshProLocks(); }
+      if (sess){ await loadKeys(); await loadControls(); await loadVoxStatus(); }
+      else { resetKeys(); voxStatus = { enabled:false, available:false, loaded:false }; renderVoxStatus(); refreshProLocks(); }
     });
     sb.auth.getSession().then(async ({data})=>{
       session = data.session; renderAuth();
-      if (session){ await loadKeys(); await loadControls(); }
+      if (session){ await loadKeys(); await loadControls(); await loadVoxStatus(); }
     });
   }
   refreshProLocks();
