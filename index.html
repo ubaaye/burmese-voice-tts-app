@@ -84,7 +84,16 @@
   .sliderVal{font-size:12.5px;min-width:44px;text-align:right;color:var(--muted);}
   .volRow{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);}
   .volRow input[type=range]{flex:1;accent-color:var(--accent2);}
-  audio{width:100%;margin-top:10px;}
+  .hiddenAudio{display:none !important;}
+  .audioPlayer{margin-top:10px;background:rgba(0,0,0,.30);border:1px solid var(--glass-border);border-radius:14px;padding:10px 12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}
+  .audioPlayer .apUi{display:flex;align-items:center;gap:10px;}
+  .apBtn{width:42px;height:42px;flex:0 0 42px;border:none;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 6px 16px rgba(77,163,255,.35);}
+  .audioPlayer.compact{margin-top:8px;padding:8px 10px;border-radius:12px;}
+  .audioPlayer.compact .apBtn{width:34px;height:34px;flex-basis:34px;font-size:14px;}
+  .apSeek{flex:1;min-width:0;accent-color:var(--accent);height:4px;cursor:pointer;}
+  .apTime{font-size:12px;color:var(--muted);white-space:nowrap;min-width:74px;text-align:right;font-variant-numeric:tabular-nums;}
+  .audioPlayer.compact .apTime{min-width:66px;font-size:11.5px;}
+  .uploadPreview{margin-top:2px;}
   .dlBtn{display:inline-block;margin-top:8px;color:var(--accent);font-size:13.5px;text-decoration:none;}
   .keyRow{display:flex;gap:6px;align-items:center;}
   .keyRow input{flex:1;}
@@ -277,6 +286,7 @@
           <input type="text" id="elCloneName" placeholder="ဥပမာ — ကျွန်တော့် အသံ" autocomplete="off">
           <label>နမူနာ အသံဖိုင်</label>
           <input type="file" id="elCloneSample" accept="audio/*">
+          <div id="elCloneSamplePreview" class="uploadPreview hidden"></div>
           <div class="muted">နမူနာ အသံဖိုင် — ၁ မိနစ် ဝန်းကျင်, ရှင်းလင်းတဲ့ အသံ က ပိုကောင်း</div>
           <button id="btnElCloneAdd" type="button" class="primary" style="width:100%;margin-top:10px;">ထည့်မယ်</button>
         </div>
@@ -319,6 +329,7 @@
       <div class="modePane hidden" id="pane-f5">
         <label>နမူနာ အသံဖိုင် (၅–၁၀ စက္ကန့် အသံကြည် ဖိုင်)</label>
         <input type="file" id="f5Ref" accept="audio/*">
+        <div id="f5RefPreview" class="uploadPreview hidden"></div>
         <label>နမူနာ အသံထဲက စာသား (အတိအကျ)</label>
         <textarea id="f5RefText" style="min-height:48px;" placeholder="နမူနာ အသံထဲမှာ ပြောထားတဲ့ စာသား အတိအကျ ရေးပါ"></textarea>
         <label>ပြောမယ့် စာသား အသစ်</label>
@@ -338,6 +349,7 @@
         <div id="voxStatus" class="msg info">🔒 VoxCPM ကို admin က ပိတ်ထားပါတယ် — ဖွင့်ထားတဲ့ အချိန်မှ သုံးလို့ရပါမယ်</div>
         <label>နမူနာ အသံဖိုင် (clone လုပ်မယ့် အသံ)</label>
         <input type="file" id="voxRef" accept="audio/*">
+        <div id="voxRefPreview" class="uploadPreview hidden"></div>
         <label>နမူနာ အသံထဲက စာသား (အတိအကျ)</label>
         <textarea id="voxRefText" style="min-height:48px;" placeholder="နမူနာ အသံထဲမှာ ပြောထားတဲ့ စာသား အတိအကျ ရေးပါ"></textarea>
         <label>ပြောမယ့် စာသား</label>
@@ -355,7 +367,9 @@
       </div>
 
       <div id="resultBox" class="hidden">
-        <audio id="player" controls></audio>
+        <div id="resultPlayer" class="audioPlayer">
+          <audio id="player" preload="metadata"></audio>
+        </div>
         <a id="dlLink" class="dlBtn" href="#" download>⬇️ ဒေါင်းလုပ်ဆွဲ</a>
       </div>
     </div>
@@ -493,6 +507,7 @@ let keys = { el_key:"", gemini_key:"", hf_token:"", pro_code:"" };
 let disabledModes = [];             // modes the admin disabled for this user (user_controls.disabled_modes)
 let currentMode = "edge";
 let lastObjectUrl = null;
+let resultPlayer = null;
 
 const GEMINI_VOICES = ["Kore","Zephyr","Puck","Charon","Fenrir","Leda","Orus","Aoede","Callirrhoe","Autonoe",
   "Enceladus","Iapetus","Umbriel","Algieba","Despina","Erinome","Algenib","Rasalgethi","Laomedeia","Alnilam",
@@ -718,6 +733,119 @@ function measureDuration(blob){
   });
 }
 
+/* ---------------- custom audio players ----------------
+   One reusable builder powers the generated-result player and the
+   compact local-file previews under each audio upload input. The real
+   playback still happens on an <audio> element, kept visually hidden;
+   the themed UI is play/pause + a slim seek slider + time text. */
+function fmtPlayerTime(sec){
+  if (typeof sec !== "number" || !isFinite(sec) || sec < 0) sec = 0;
+  sec = Math.floor(sec);
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m + ":" + (s < 10 ? "0" : "") + s;
+}
+function makePlayer(audio, mount, opts){
+  opts = opts || {};
+  if (!audio || !mount) return null;
+  audio.classList.add("hiddenAudio");
+  audio.removeAttribute("controls");
+  if (!audio.preload) audio.preload = "metadata";
+  mount.classList.add("audioPlayer");
+  if (opts.compact) mount.classList.add("compact");
+  if (audio.parentNode !== mount) mount.appendChild(audio);
+  const ui = document.createElement("div"); ui.className = "apUi";
+  const btn = document.createElement("button");
+  btn.type = "button"; btn.className = "apBtn"; btn.textContent = "▶";
+  btn.setAttribute("aria-label", "Play/Pause");
+  const seek = document.createElement("input");
+  seek.type = "range"; seek.className = "apSeek";
+  seek.min = "0"; seek.max = "0"; seek.step = "0.1"; seek.value = "0";
+  seek.setAttribute("aria-label", "Seek");
+  const time = document.createElement("span");
+  time.className = "apTime"; time.textContent = "0:00 / 0:00";
+  ui.appendChild(btn); ui.appendChild(seek); ui.appendChild(time);
+  mount.appendChild(ui);
+  let seeking = false;
+  const paint = ()=>{
+    const cur = audio.currentTime || 0, dur = audio.duration || 0;
+    const hasDur = isFinite(dur) && dur > 0;
+    if (!seeking){
+      seek.max = hasDur ? String(dur) : "0";
+      seek.value = String(hasDur ? Math.min(cur, dur) : cur);
+    }
+    time.textContent = fmtPlayerTime(cur) + " / " + fmtPlayerTime(dur);
+    btn.textContent = audio.paused ? "▶" : "⏸";
+  };
+  const reset = ()=>{
+    try{ audio.pause(); }catch(e){}
+    seeking = false;
+    seek.value = "0"; seek.max = "0";
+    time.textContent = "0:00 / 0:00";
+    btn.textContent = "▶";
+  };
+  const load = (url)=>{
+    reset();
+    if (url){
+      audio.src = url;
+      if (audio.load) { try{ audio.load(); }catch(e){} }
+    } else {
+      audio.removeAttribute("src");
+    }
+    paint();
+  };
+  btn.addEventListener("click", ()=>{
+    if (audio.paused){
+      const p = audio.play();
+      if (p && p.catch) p.catch(()=>{});
+    } else {
+      audio.pause();
+    }
+    paint();
+  });
+  seek.addEventListener("input", ()=>{
+    const v = parseFloat(seek.value);
+    if (!isFinite(v)) return;
+    seeking = true;
+    if (isFinite(audio.duration) && audio.duration > 0){
+      try{ audio.currentTime = v; }catch(e){}
+    }
+    time.textContent = fmtPlayerTime(v) + " / " + fmtPlayerTime(audio.duration || 0);
+  });
+  seek.addEventListener("change", ()=>{ seeking = false; paint(); });
+  ["loadedmetadata","durationchange","timeupdate","play","pause","ended","emptied"].forEach(ev=>{
+    audio.addEventListener(ev, ()=>{
+      if (ev === "ended"){ try{ audio.pause(); }catch(e){} }
+      paint();
+    });
+  });
+  paint();
+  return { audio: audio, load: load, reset: reset, paint: paint };
+}
+/* Attach a compact local-file preview under one audio upload input.
+   Choosing a file points the preview at URL.createObjectURL(file);
+   changing/clearing the file revokes the old URL. Generation keeps
+   submitting input.files[0] exactly as before. */
+function attachUploadPreview(inputId, mountId){
+  const input = $(inputId), mount = $(mountId);
+  if (!input || !mount) return;
+  const audio = document.createElement("audio");
+  audio.preload = "metadata";
+  const api = makePlayer(audio, mount, { compact:true });
+  let url = null;
+  input.addEventListener("change", ()=>{
+    const file = input.files && input.files[0];
+    if (url){ URL.revokeObjectURL(url); url = null; }
+    if (!file){
+      api.load("");
+      mount.classList.add("hidden");
+      return;
+    }
+    url = URL.createObjectURL(file);
+    api.load(url);
+    mount.classList.remove("hidden");
+  });
+}
+
 /* ---------------- profile keys (Supabase user_keys, own row via RLS) ---------------- */
 let keysSavedAt = "";
 /* Visible proof that keys are stored on the account (shown in My Profile). */
@@ -933,7 +1061,8 @@ async function showResult(blob, mode, chars, ext){
   const processed = await applyVolume(blob, vol);
   if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
   lastObjectUrl = URL.createObjectURL(processed);
-  $("player").src = lastObjectUrl;
+  if (resultPlayer) resultPlayer.load(lastObjectUrl);
+  else $("player").src = lastObjectUrl;
   const a = $("dlLink");
   a.href = lastObjectUrl;
   a.download = "burmese-tts-" + mode + (processed.type.includes("wav") ? ".wav" : (ext||".mp3"));
@@ -1515,6 +1644,10 @@ function fillGeminiVoices(){
   syncSelectButton("spk2Voice");
 }
 function init(){
+  resultPlayer = makePlayer($("player"), $("resultPlayer"));
+  attachUploadPreview("f5Ref", "f5RefPreview");
+  attachUploadPreview("voxRef", "voxRefPreview");
+  attachUploadPreview("elCloneSample", "elCloneSamplePreview");
   fillGeminiVoices();
   initGemStyleChips();
   bindCounter("edgeText","edgeCounter",0);
