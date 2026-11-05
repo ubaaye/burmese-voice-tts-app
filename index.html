@@ -4,7 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Burmese Voice TTS — Public</title>
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="description" content="မြန်မာ စာသားကို အသံ ပြောင်းပေးတဲ့ app — Edge TTS အခမဲ့၊ ElevenLabs / Gemini / F5 / VoxCPM clone အသံများ။ Burmese text-to-speech with free Edge voices and AI voice cloning.">
+<meta name="theme-color" content="#0d1220">
+<link rel="manifest" href="manifest.webmanifest">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Burmese Voice TTS">
+<meta property="og:title" content="Burmese Voice TTS — မြန်မာ အသံထွက် app">
+<meta property="og:description" content="မြန်မာ စာသားကို အသံ ပြောင်းပါ — အခမဲ့ Edge အသံများ၊ ကိုယ်ပိုင် အသံ clone များ။">
+<meta property="og:url" content="https://ubaaye.github.io/burmese-voice-tts-app/">
+<meta property="og:image" content="https://ubaaye.github.io/burmese-voice-tts-app/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Burmese Voice TTS — မြန်မာ အသံထွက် app">
+<meta name="twitter:description" content="မြန်မာ စာသားကို အသံ ပြောင်းပါ — အခမဲ့ Edge အသံများ၊ ကိုယ်ပိုင် အသံ clone များ။">
+<meta name="twitter:image" content="https://ubaaye.github.io/burmese-voice-tts-app/og.png">
 <style>
+  @font-face{font-family:"Padauk Web";src:url("padauk-regular.woff2") format("woff2");
+    font-weight:400;font-style:normal;font-display:swap;}
+  @font-face{font-family:"Padauk Web";src:url("padauk-bold.woff2") format("woff2");
+    font-weight:700;font-style:normal;font-display:swap;}
   :root{
     --glass: rgba(255,255,255,.08);
     --glass-border: rgba(255,255,255,.16);
@@ -16,7 +35,7 @@
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;}
   body{
-    font-family:"Segoe UI",system-ui,-apple-system,"Myanmar Text",sans-serif;
+    font-family:"Padauk Web","Segoe UI",system-ui,-apple-system,"Myanmar Text",sans-serif;
     color:var(--txt); min-height:100vh;
     background:
       radial-gradient(900px 500px at 15% -10%, rgba(124,92,255,.35), transparent 60%),
@@ -81,6 +100,11 @@
   .proLock{background:rgba(255,207,77,.12);border:1px dashed rgba(255,207,77,.55);color:#ffe1a1;
     border-radius:10px;padding:9px 11px;font-size:12.5px;line-height:1.6;margin-top:10px;}
   .counter{font-size:11.5px;color:var(--muted);text-align:right;margin-top:3px;}
+  /* ✨ စာပြင် fixed-state chip + per-pane fix button row */
+  .fixRow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+  .fixChip{font-size:12px;margin-top:5px;line-height:1.5;}
+  .fixChip.warn{color:var(--gold);}
+  .fixChip.ok{color:var(--ok);}
   .counter.over{color:var(--danger);}
   .sliderRow{display:flex;align-items:center;gap:10px;margin-top:4px;}
   .sliderRow input[type=range]{flex:1;accent-color:var(--accent);}
@@ -101,6 +125,29 @@
   .audioPlayer.compact .apTime{min-width:66px;font-size:11.5px;}
   .uploadPreview{margin-top:2px;}
   .dlBtn{display:inline-block;margin-top:8px;color:var(--accent);font-size:13.5px;text-decoration:none;}
+  /* Player extras: playback-speed cycle + loop toggle (result player) */
+  .apSpeedBtn,.apLoopBtn{flex:0 0 auto;border:1px solid transparent;background:rgba(255,255,255,.10);
+    color:var(--txt);font-size:11px;font-weight:700;padding:5px 6px;border-radius:8px;min-width:34px;line-height:1.2;}
+  .apLoopBtn.on{background:rgba(77,163,255,.35);border-color:var(--accent);}
+  .audioPlayer.compact .apSpeedBtn,.audioPlayer.compact .apLoopBtn{min-width:30px;padding:4px 5px;}
+  /* Generation history (IndexedDB-backed) */
+  .histRow{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:12px;
+    padding:10px 12px;margin-top:10px;}
+  .histHead{display:flex;justify-content:space-between;gap:8px;font-size:13.5px;font-weight:600;}
+  .histWhen{font-size:11.5px;color:var(--muted);font-weight:400;white-space:nowrap;}
+  .histSnippet{font-size:12.5px;color:var(--muted);line-height:1.55;margin-top:3px;overflow:hidden;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  .histFoot{display:flex;justify-content:space-between;align-items:center;}
+  .histFoot .dlBtn{margin-top:4px;}
+  /* Landing FAQ */
+  .faqItem{margin-top:12px;}
+  .faqItem:first-of-type{margin-top:4px;}
+  .faqQ{font-weight:700;font-size:13.5px;line-height:1.5;}
+  .faqA{font-size:13px;color:var(--muted);line-height:1.65;margin-top:2px;}
+  .proPill{font-size:9.5px;font-weight:800;color:#0d1220;background:linear-gradient(135deg,var(--gold),#ffb52e);
+    padding:1px 6px;border-radius:20px;margin-left:6px;vertical-align:2px;letter-spacing:.4px;}
+  .linkBtn{background:none;border:none;color:var(--accent);padding:6px 0 0;font-size:13px;
+    cursor:pointer;text-decoration:underline;text-align:left;}
   .keyRow{display:flex;gap:6px;align-items:center;}
   .keyRow input{flex:1;}
   .keyRow .eye{flex:0 0 auto;padding:9px 10px;}
@@ -236,7 +283,7 @@
     .card{padding:20px;margin-bottom:16px;}
     #landingView{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
     #landingView>.card{margin-bottom:0;}
-    #landingView>.heroCard,#landingView>.stepsCard,#landingView>.siteFooter{grid-column:1 / -1;}
+    #landingView>.heroCard,#landingView>.stepsCard,#landingView>.faqCard,#landingView>.siteFooter{grid-column:1 / -1;}
     .featGrid{grid-template-columns:1fr;}
     h2{font-size:18px;}
   }
@@ -305,9 +352,9 @@
       <h2>✨ ရနိုင်တဲ့ Feature တွေ</h2>
       <div class="featGrid">
         <div class="featCard"><span class="featIcon">🔊</span><div><div class="featTitle">Edge TTS</div><div class="featLine">အခမဲ့</div></div></div>
-        <div class="featCard"><span class="featIcon">🎙️</span><div><div class="featTitle">ElevenLabs</div><div class="featLine">ကိုယ်ပိုင် အသံ clone</div></div></div>
-        <div class="featCard"><span class="featIcon">🎛️</span><div><div class="featTitle">Gemini</div><div class="featLine">အသံ ၃၀ + အသံနေ အသံထား</div></div></div>
-        <div class="featCard"><span class="featIcon">🧬</span><div><div class="featTitle">F5 Clone</div><div class="featLine">နမူနာ အသံကနေ clone</div></div></div>
+        <div class="featCard"><span class="featIcon">🎙️</span><div><div class="featTitle">ElevenLabs<span class="proPill">PRO</span></div><div class="featLine">ကိုယ်ပိုင် အသံ clone</div></div></div>
+        <div class="featCard"><span class="featIcon">🎛️</span><div><div class="featTitle">Gemini<span class="proPill">PRO</span></div><div class="featLine">အသံ ၃၀ + အသံနေ အသံထား</div></div></div>
+        <div class="featCard"><span class="featIcon">🧬</span><div><div class="featTitle">F5 Clone<span class="proPill">PRO</span></div><div class="featLine">နမူနာ အသံကနေ clone</div></div></div>
         <div class="featCard"><span class="featIcon">🚀</span><div><div class="featTitle">VoxCPM Clone</div><div class="featLine">(admin ဖွင့်ထားချိန်သာ)</div></div></div>
         <div class="featCard"><span class="featIcon">✨</span><div><div class="featTitle">စာပြင်</div><div class="featLine">ဂဏန်း/စာလုံးပေါင်း အလိုအလျောက် ပြင်</div></div></div>
         <div class="featCard"><span class="featIcon">✂️</span><div><div class="featTitle">စာပိုင်းထုတ်</div><div class="featLine">စာရှည် အလိုအလျောက် ပိုင်းထုတ်</div></div></div>
@@ -321,6 +368,33 @@
         <div class="stepCard">၂။ Edge TTS ကို တန်း သုံးနိုင် (အခမဲ့)</div>
         <div class="stepCard">၃။ Pro သုံးချင်ရင် Menu ထဲမှာ ကိုယ့် API key ထည့် (သို့) Pro code သုံး</div>
         <div class="stepCard">၄။ Engine ရွေး၊ စာရေး၊ "အသံ ထုတ်မယ်" နှိပ်</div>
+      </div>
+    </section>
+
+    <section class="card faqCard">
+      <h2>❓ မေးခွန်းများ</h2>
+      <div class="faqItem">
+        <div class="faqQ">Edge TTS အခမဲ့ က အကန့်အသတ် ရှိလား?</div>
+        <div class="faqA">ရှိပါတယ် — ၁ နာရီလျှင် အကြိမ် ၁၂၀ အထိ သုံးနိုင်ပါတယ်။ စာရှည် ရေးရင် အပိုင်း ပိုင်းထုတ်ပြီး ထုတ်ပေးလို့ အကြိမ်ရေ ပို ကုန်နိုင်ပါတယ်။</div>
+      </div>
+      <div class="faqItem">
+        <div class="faqQ">Pro ဆိုတာ ဘာလဲ? Key / Code ဘယ်လို ရမလဲ?</div>
+        <div class="faqA">ElevenLabs / Gemini / F5 Clone က Pro feature တွေပါ။ ကိုယ်ပိုင် API key ကို Login ဝင်ပြီး Menu → «My Keys &amp; Pro Code» မှာ ထည့်ရင် code မလိုဘဲ သုံးနိုင်ပါတယ်။ ဒါမှမဟုတ် ပိုင်ရှင် ပေးတဲ့ Pro code ထည့်ရင် owner ရဲ့ key နဲ့ သုံးနိုင်ပါတယ်။</div>
+      </div>
+      <div class="faqItem">
+        <div class="faqQ">ကိုယ့် API key လုံခြုံရဲ့လား?</div>
+        <div class="faqA">Key တွေကို သင့် အကောင့်ထဲမှာပဲ သိမ်းထားပြီး သင့် တောင်းဆိုမှုတွေ အတွက်ပဲ သုံးပါတယ် — သူများ မမြင်နိုင်ပါ။ စိတ်ချချင်ရင် ဒီ app အတွက် သီးသန့် ထုတ်ထားတဲ့ key ကိုပဲ ထည့်သုံးပါ၊ မသုံးတော့ရင် မူရင်း နေရာကနေ အချိန်မရွေး ပြန် ပိတ်လိုက်လို့ ရပါတယ်။</div>
+      </div>
+      <div class="faqItem">
+        <div class="faqQ">VoxCPM ကို ဘာလို့ အမြဲ သုံးလို့ မရတာလဲ?</div>
+        <div class="faqA">VoxCPM က သီးသန့် GPU session ဖွင့်ထားတဲ့ အချိန်မှပဲ အလုပ် လုပ်ပါတယ်။ admin က switch ဖွင့်ပြီး session ရှိနေတဲ့ အချိန်မှသာ သုံးနိုင်ပါတယ် — ပိတ်ထားချိန်မှာ တခြား engine တွေ ဆက် သုံးနိုင်ပါတယ်။</div>
+      </div>
+      <div class="faqItem">
+        <div class="faqQ">အသံ မထွက်ရင် / ဆာဗာ နိုးချိန် ကြာရင် ဘာလုပ်ရမလဲ?</div>
+        <div class="faqA">ဆာဗာက အခမဲ့ အဆင့် ဖြစ်လို့ အိပ်ပျော်နေရင် ပြန် နိုးဖို့ ~၁ မိနစ် လောက် ကြာနိုင်ပါတယ်။ ခဏ စောင့်ပြီး «ပြန် စမ်းမယ်» ခလုတ် နှိပ်ပါ — အင်တာနက် ချိတ်ဆက်မှုလည်း စစ်ကြည့်ပါ။</div>
+      </div>
+      <div class="faqItem">
+        <div class="faqA">ဆက်သွယ်ရန်: TikTok <a href="https://www.tiktok.com/@old.burma.com" target="_blank" rel="noopener">@old.burma.com</a></div>
       </div>
     </section>
 
@@ -346,6 +420,12 @@
     <div class="row" style="margin-top:14px;">
       <button id="btnSignIn" class="primary">ဝင်မယ်</button>
       <button id="btnSignUp">အကောင့်သစ် ဖွင့်မယ်</button>
+    </div>
+    <button id="btnForgot" class="linkBtn" type="button">Password မေ့သွားလား?</button>
+    <div id="recoveryBox" class="hidden" style="margin-top:12px;">
+      <label>Password အသစ် သတ်မှတ်ပါ</label>
+      <input id="newPass" type="password" autocomplete="new-password" placeholder="••••••••">
+      <button id="btnSetPass" class="primary" type="button" style="width:100%;margin-top:10px;">💾 Password အသစ် သိမ်းမယ်</button>
     </div>
     <div id="authMsg" class="msg info"></div>
   </section>
@@ -390,7 +470,8 @@
       <div class="modePane" id="pane-edge">
         <label>စာသား</label>
         <textarea id="edgeText" placeholder="အသံ ပြောင်းချင်တဲ့ မြန်မာ စာသား ရေးပါ...">မင်္ဂလာပါ ရှင်။ ဒီနေ့ အကြောင်းလေး ပြောပြချင်လို့ပါ။</textarea>
-        <div style="margin-top:6px;"><button type="button" class="small" data-fix="edgeText">✨ စာပြင်</button></div>
+        <div class="fixRow"><button type="button" class="small primary" data-fixopen="edgeText">✨ စာပြင်</button><button type="button" class="small" data-fix="edgeText">⚡ တန်း ပြင်</button></div>
+        <div class="fixChip hidden" id="fixChip-edgeText"></div>
         <div class="counter" id="edgeCounter"></div>
         <label>အသံ</label>
         <button id="edgeVoiceBtn" class="pickBtn" type="button"><span class="pickLabel" id="edgeVoiceBtnLabel"></span><span class="pickCaret">▾</span></button>
@@ -408,6 +489,7 @@
           <input type="range" id="edgePitch" min="-50" max="50" step="5" value="0">
           <span class="sliderVal" id="edgePitchVal">0 Hz</span>
         </div>
+        <div class="muted" style="margin-top:8px;">အခမဲ့ အသုံးပြုမှု: ၁ နာရီလျှင် အကြိမ် ၁၂၀ အထိ ရပါတယ်</div>
         <div style="text-align:right;margin-top:10px;"><button type="button" class="small" data-reset-pane="edge">↺ Reset</button></div>
         <div class="proLock hidden" data-prolock></div>
       </div>
@@ -416,7 +498,8 @@
       <div class="modePane hidden" id="pane-el">
         <label>စာသား</label>
         <textarea id="elText" placeholder="ElevenLabs clone အသံနဲ့ ပြောမယ့် စာသား...">မင်္ဂလာပါ။ ကျွန်တော့် အသံနဲ့ ပြောနေတာပါ။</textarea>
-        <div style="margin-top:6px;"><button type="button" class="small" data-fix="elText">✨ စာပြင်</button></div>
+        <div class="fixRow"><button type="button" class="small primary" data-fixopen="elText">✨ စာပြင်</button><button type="button" class="small" data-fix="elText">⚡ တန်း ပြင်</button></div>
+        <div class="fixChip hidden" id="fixChip-elText"></div>
         <div class="counter" id="elCounter"></div>
         <label>အသံ (Voice)</label>
         <div class="row">
@@ -438,6 +521,11 @@
           <div class="muted">နမူနာ အသံဖိုင် — ၁ မိနစ် ဝန်းကျင်, ရှင်းလင်းတဲ့ အသံ က ပိုကောင်း</div>
           <button id="btnElCloneAdd" type="button" class="primary" style="width:100%;margin-top:10px;">ထည့်မယ်</button>
         </div>
+        <label>အသံနှုန်း</label>
+        <div class="sliderRow">
+          <input type="range" id="elSpeed" min="0.5" max="2" step="0.05" value="1">
+          <span class="sliderVal" id="elSpeedVal">1.0×</span>
+        </div>
         <div style="text-align:right;margin-top:10px;"><button type="button" class="small" data-reset-pane="el">↺ Reset</button></div>
         <div class="proLock hidden" data-prolock></div>
       </div>
@@ -446,7 +534,8 @@
       <div class="modePane hidden" id="pane-gemini">
         <label>စာသား</label>
         <textarea id="gemText" placeholder="Gemini အသံနဲ့ ပြောမယ့် စာသား...">မင်္ဂလာပါ ရှင်။ ဒီနေ့ အကြောင်းလေး ပြောပြချင်လို့ပါ။</textarea>
-        <div style="margin-top:6px;"><button type="button" class="small" data-fix="gemText">✨ စာပြင်</button></div>
+        <div class="fixRow"><button type="button" class="small primary" data-fixopen="gemText">✨ စာပြင်</button><button type="button" class="small" data-fix="gemText">⚡ တန်း ပြင်</button></div>
+        <div class="fixChip hidden" id="fixChip-gemText"></div>
         <div class="counter" id="gemCounter"></div>
         <label>အသံ (Studio voice)</label>
         <button id="gemVoiceBtn" class="pickBtn" type="button"><span class="pickLabel" id="gemVoiceBtnLabel"></span><span class="pickCaret">▾</span></button>
@@ -482,6 +571,8 @@
         <textarea id="f5RefText" style="min-height:48px;" placeholder="နမူနာ အသံထဲမှာ ပြောထားတဲ့ စာသား အတိအကျ ရေးပါ"></textarea>
         <label>ပြောမယ့် စာသား အသစ်</label>
         <textarea id="f5Text" placeholder="clone အသံနဲ့ ပြောမယ့် စာသား အသစ်..."></textarea>
+        <div class="fixRow"><button type="button" class="small primary" data-fixopen="f5Text">✨ စာပြင်</button><button type="button" class="small" data-fix="f5Text">⚡ တန်း ပြင်</button></div>
+        <div class="fixChip hidden" id="fixChip-f5Text"></div>
         <div class="counter" id="f5Counter"></div>
         <label>အသံနှုန်း</label>
         <div class="sliderRow">
@@ -502,7 +593,8 @@
         <textarea id="voxRefText" style="min-height:48px;" placeholder="နမူနာ အသံထဲမှာ ပြောထားတဲ့ စာသား အတိအကျ ရေးပါ"></textarea>
         <label>ပြောမယ့် စာသား</label>
         <textarea id="voxText" placeholder="clone အသံနဲ့ ပြောမယ့် စာသား...">မင်္ဂလာပါ ခင်ဗျား။ ဒီနေ့ ရာသီဥတု သာယာတယ်နော်။</textarea>
-        <div style="margin-top:6px;"><button type="button" class="small" data-fix="voxText">✨ စာပြင်</button></div>
+        <div class="fixRow"><button type="button" class="small primary" data-fixopen="voxText">✨ စာပြင်</button><button type="button" class="small" data-fix="voxText">⚡ တန်း ပြင်</button></div>
+        <div class="fixChip hidden" id="fixChip-voxText"></div>
         <div class="counter" id="voxCounter"></div>
         <div class="proLock hidden" data-prolock></div>
       </div>
@@ -519,7 +611,17 @@
           <audio id="player" preload="metadata"></audio>
         </div>
         <a id="dlLink" class="dlBtn" href="#" download>⬇️ ဒေါင်းလုပ်ဆွဲ</a>
+        <button id="btnShare" class="small" type="button" style="margin-left:10px;">📤 Share</button>
       </div>
+    </div>
+
+    <!-- GENERATION HISTORY (IndexedDB — survives reload) -->
+    <div class="card hidden" id="historyCard">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <h2 style="margin:0;">🕘 History</h2>
+        <button id="btnClearHistory" class="small" type="button">History ရှင်းမယ်</button>
+      </div>
+      <div id="historyList"></div>
     </div>
 
     <p class="muted" style="text-align:center;">Edge TTS = အခမဲ့ · Pro feature များ = ကိုယ့် key (သို့) Pro code</p>
@@ -549,6 +651,12 @@
       <div id="ownerBadge" class="hidden" style="font-size:12px;color:#ffd740;margin-top:2px;">👑 Owner — Pro code မလိုပါ</div>
     </div>
     <button id="btnSignOut" class="small">ထွက်မယ်</button>
+  </div>
+
+  <!-- OWN USAGE (usage_log read-own; hidden silently if the read fails) -->
+  <div class="card hidden" id="usageCard">
+    <div style="font-weight:700;margin-bottom:6px;">📊 ကျွန်တော့် အသုံးပြု</div>
+    <div id="usageBody" class="muted"></div>
   </div>
 
   <!-- MENU ENTRIES — settings/features open as pop-up sheets -->
@@ -618,6 +726,19 @@
   </div>
 </div>
 
+<!-- ✨ စာပြင် EDITOR sheet (shared by all five engine text areas) -->
+<div id="sheetFix" class="sheet" aria-hidden="true">
+  <div class="sheetHead"><span>✨ စာပြင်</span><button class="small" type="button" data-close-sheet>✕</button></div>
+  <div class="sheetBody">
+    <div class="fixChip hidden" id="fixEditorChip" style="margin:0 0 6px;"></div>
+    <textarea id="fixEditorText" style="min-height:150px;" placeholder="ပြင်ချင်တဲ့ စာသား..."></textarea>
+    <div class="fixRow" style="margin-top:10px;">
+      <button id="btnFixAuto" type="button">✨ အလိုအလျောက် ပြင်</button>
+      <button id="btnFixSave" type="button" class="primary">💾 သိမ်းမယ်</button>
+    </div>
+  </div>
+</div>
+
 <!-- GENERIC PICKER sheet (engine / voice selection) -->
 <div id="sheet" class="sheet" aria-hidden="true">
   <div class="sheetHead"><span id="sheetTitle"></span><button id="sheetClose" class="small" type="button">✕</button></div>
@@ -647,6 +768,10 @@ if (!sb || SUPABASE_URL.includes("YOUR-")) $("configWarn").classList.remove("hid
 
 let session = null;                 // Supabase session
 let authRevealed = false;           // signed-out: landing shows first; the auth card appears on demand
+let recoveryMode = false;           // password-recovery return: keep the auth card up for the new-password form
+let sessionDeadHandled = false;     // 401 session-expiry routing runs at most once per session
+let lastResultBlob = null;          // current generated audio (for Share + history)
+let lastResultName = "";            // its download filename
 /* Owner bypass: the owner's own login email gets full Pro without a pro code.
    The server verifies the same email from the JWT — this only drives UI gating. */
 function isOwner(){
@@ -797,6 +922,18 @@ function encodeWav(buffer){
 
 /* ---------------- API layer (auth + wake handling) ---------------- */
 class WakeError extends Error {}
+/* Session expiry: a pub API 401 while we hold a session means the login
+   died — drop it locally and route back to the auth card with a clear
+   message. Runs once per session (guarded), never when signed out. */
+function handleSessionDead(){
+  if (!session || sessionDeadHandled) return;
+  sessionDeadHandled = true;
+  session = null;
+  authRevealed = true;
+  if (sb){ try{ const p = sb.auth.signOut(); if (p && p.catch) p.catch(()=>{}); }catch(e){} }
+  renderAuth();
+  setMsg("authMsg", "⏰ Login သက်တမ်း ကုန်သွားပါပြီ — ပြန် ဝင်ပေးပါ", "err");
+}
 async function authHeader(){
   if (!sb) return {};
   const { data } = await sb.auth.getSession();
@@ -811,6 +948,7 @@ async function apiFetch(path, opts){
     resp = await fetch(PUBLIC_API + path, Object.assign({}, opts, { headers }));
   }catch(e){ throw new WakeError("network"); }
   if (resp.status === 502 || resp.status === 503) throw new WakeError("http "+resp.status);
+  if (resp.status === 401) handleSessionDead();
   return resp;
 }
 async function apiErrorText(resp){
@@ -982,7 +1120,31 @@ function makePlayer(audio, mount, opts){
   }
   const time = document.createElement("span");
   time.className = "apTime"; time.textContent = "0:00 / 0:00";
-  ui.appendChild(btn); ui.appendChild(wave); ui.appendChild(time);
+  /* Playback-speed cycle: 0.75× → 1× → 1.25× → 1.5× → 2× (all players). */
+  const SPD_RATES = [0.75, 1, 1.25, 1.5, 2];
+  let spdIdx = 1;
+  const spdBtn = document.createElement("button");
+  spdBtn.type = "button"; spdBtn.className = "apSpeedBtn"; spdBtn.textContent = "1×";
+  spdBtn.setAttribute("aria-label", "Playback speed");
+  spdBtn.addEventListener("click", ()=>{
+    spdIdx = (spdIdx + 1) % SPD_RATES.length;
+    const r = SPD_RATES[spdIdx];
+    try{ audio.playbackRate = r; }catch(e){}
+    spdBtn.textContent = (r === 1 ? "1" : String(r)) + "×";
+  });
+  ui.appendChild(btn); ui.appendChild(wave); ui.appendChild(spdBtn);
+  /* Loop toggle — result player only (opts.loop). */
+  if (opts.loop){
+    const loopBtn = document.createElement("button");
+    loopBtn.type = "button"; loopBtn.className = "apLoopBtn"; loopBtn.textContent = "🔁";
+    loopBtn.setAttribute("aria-label", "Loop");
+    loopBtn.addEventListener("click", ()=>{
+      try{ audio.loop = !audio.loop; }catch(e){}
+      loopBtn.classList.toggle("on", !!audio.loop);
+    });
+    ui.appendChild(loopBtn);
+  }
+  ui.appendChild(time);
   mount.appendChild(ui);
   let peaks = pseudoPeaks(WAVE_BARS);
   let loadToken = 0;
@@ -1157,6 +1319,31 @@ async function loadControls(){
   }catch(e){ disabledModes = []; }
   refreshProLocks();
 }
+/* ---------------- own usage (drawer profile block) ----------------
+   Reads the user's own usage_log rows (read-own via RLS). Any failure —
+   no permission, no rows — hides the block silently. */
+async function loadUsage(){
+  const card = $("usageCard"), body = $("usageBody");
+  if (!card || !body) return;
+  if (!sb || !session){ card.classList.add("hidden"); return; }
+  try{
+    const { data, error } = await sb.from("usage_log")
+      .select("mode, chars, duration_seconds, created_at")
+      .eq("user_id", session.user.id)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error || !Array.isArray(data) || !data.length){ card.classList.add("hidden"); return; }
+    const totals = {};
+    data.forEach(r=>{
+      const t = totals[r.mode] || (totals[r.mode] = { calls: 0, chars: 0 });
+      t.calls++; t.chars += (r.chars || 0);
+    });
+    body.textContent = Object.keys(totals).map(m =>
+      (MODE_NAMES[m] || m) + ": " + totals[m].calls + " ကြိမ် · " + totals[m].chars + " လုံး"
+    ).join(" · ");
+    card.classList.remove("hidden");
+  }catch(e){ card.classList.add("hidden"); }
+}
 /* ---------------- VoxCPM (Beta) availability ----------------
    The session lives server-side (Kaggle); the client only asks the server:
    enabled = the admin's global VoxCPM switch (owner always counts as on),
@@ -1183,6 +1370,8 @@ function renderVoxStatus(){
   });
   const fixBtn = document.querySelector('#pane-vox [data-fix="voxText"]');
   if (fixBtn) fixBtn.disabled = !usable;
+  const fixOpenBtn = document.querySelector('#pane-vox [data-fixopen="voxText"]');
+  if (fixOpenBtn) fixOpenBtn.disabled = !usable;
   const pane = $("pane-vox");
   if (pane) pane.classList.toggle("paneOff", !usable);
 }
@@ -1196,6 +1385,7 @@ async function voxFetch(path, opts){
     resp = await fetch(PUBLIC_API + path, Object.assign({}, opts, { headers }));
   }catch(e){ throw new WakeError("network"); }
   if (resp.status === 502) throw new WakeError("http 502");
+  if (resp.status === 401) handleSessionDead();
   return resp;
 }
 async function loadVoxStatus(){
@@ -1263,10 +1453,11 @@ function resetPane(mode){
     setRange("edgeRate", "100");                /* markup value="100" */
     setRange("edgePitch", "0");                 /* markup value="0" */
   } else if (mode === "el"){
-    /* No speed control in this pane; the select only ever holds the NLO
-       clone (loadElVoices rule), so reset re-selects that option. */
+    /* The select only ever holds the NLO clone (loadElVoices rule), so
+       reset re-selects that option; speed returns to 1.0×. */
     const sel = $("elVoice");
     if (sel && sel.options.length) setSel("elVoice", sel.options[0].value);
+    setRange("elSpeed", "1");
   } else if (mode === "gemini"){
     /* Defaults from fillGeminiVoices(); style text + speaker names are
        text fields and stay untouched. */
@@ -1316,19 +1507,172 @@ function refreshProLocks(){
 }
 
 /* ---------------- result ---------------- */
+const MODE_NAMES = { edge:"Edge TTS", el:"ElevenLabs", gemini:"Gemini", f5:"F5 Clone", vox:"VoxCPM Clone" };
+const TEXT_ID_BY_MODE = { edge:"edgeText", el:"elText", gemini:"gemText", f5:"f5Text", vox:"voxText" };
+/* Best-effort human label of the voice a mode is about to use. */
+function currentVoiceLabel(mode){
+  try{
+    if (mode === "edge" || mode === "el"){
+      const s = $(mode === "edge" ? "edgeVoice" : "elVoice");
+      const o = s && s.options[s.selectedIndex];
+      return o ? o.textContent : "";
+    }
+    if (mode === "gemini") return $("gemVoice").value || "";
+  }catch(e){}
+  return "";
+}
+/* Filename-safe slug: lowercase ASCII of the voice name where feasible
+   (Burmese-only labels slug to "" and the mode alone is used). */
+function voiceSlug(label){
+  return String(label || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24);
+}
+function resultFileName(mode, voiceLabel, ext){
+  const d = new Date(), p = (n)=> String(n).padStart(2, "0");
+  const stamp = d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes());
+  const slug = voiceSlug(voiceLabel);
+  return "burmese-tts-" + mode + (slug ? "-" + slug : "") + "-" + stamp + ext;
+}
 async function showResult(blob, mode, chars, ext){
   const vol = parseInt($("volSlider").value, 10) || 100;
   const processed = await applyVolume(blob, vol);
+  const realExt = processed.type.includes("wav") ? ".wav" : (ext || ".mp3");
+  const voiceLabel = currentVoiceLabel(mode);
+  const fileName = resultFileName(mode, voiceLabel, realExt);
   if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
   lastObjectUrl = URL.createObjectURL(processed);
   if (resultPlayer) resultPlayer.load(lastObjectUrl);
   else $("player").src = lastObjectUrl;
   const a = $("dlLink");
   a.href = lastObjectUrl;
-  a.download = "burmese-tts-" + mode + (processed.type.includes("wav") ? ".wav" : (ext||".mp3"));
+  a.download = fileName;
   $("resultBox").classList.remove("hidden");
   setMsg("statusMsg", "✅ အသံ ရပါပြီ။", "ok");
-  logUsage(mode, chars, await measureDuration(processed));
+  lastResultBlob = processed;
+  lastResultName = fileName;
+  const secs = await measureDuration(processed);
+  logUsage(mode, chars, secs);
+  const ta = $(TEXT_ID_BY_MODE[mode] || "");
+  saveHistoryEntry({
+    ts: Date.now(), mode: mode, voiceLabel: voiceLabel,
+    textSnippet: ta ? String(ta.value || "").trim().slice(0, 80) : "",
+    durationSec: secs, blob: processed, fileName: fileName
+  });
+}
+/* 📤 Share the current result via the Web Share API (files) when the
+   browser supports it; otherwise fall back to the download link. */
+async function shareResult(){
+  if (!lastResultBlob){ $("dlLink").click(); return; }
+  try{
+    const file = new File([lastResultBlob], lastResultName || "burmese-tts.mp3",
+      { type: lastResultBlob.type || "audio/mpeg" });
+    if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share){
+      await navigator.share({ files: [file] });
+      return;
+    }
+  }catch(e){ if (e && e.name === "AbortError") return; }
+  $("dlLink").click();
+}
+
+/* ---------------- generation history (IndexedDB) ----------------
+   Every successful result is stored (blob included) so it survives a
+   reload; the list shows the newest 20. Everything degrades silently:
+   no IndexedDB -> the section stays hidden and the app works as before. */
+const IDB_NAME = "bvtts", IDB_STORE = "history", HISTORY_MAX = 20;
+let _idbPromise = null;
+function idbOpen(){
+  if (_idbPromise) return _idbPromise;
+  _idbPromise = new Promise((resolve)=>{
+    try{
+      if (!("indexedDB" in window) || !window.indexedDB) return resolve(null);
+      const req = window.indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = ()=>{
+        const db = req.result;
+        if (!db.objectStoreNames.contains(IDB_STORE))
+          db.createObjectStore(IDB_STORE, { keyPath: "id", autoIncrement: true });
+      };
+      req.onsuccess = ()=> resolve(req.result);
+      req.onerror = ()=> resolve(null);
+      req.onblocked = ()=> resolve(null);
+    }catch(e){ resolve(null); }
+  });
+  return _idbPromise;
+}
+async function historyAdd(entry){
+  const db = await idbOpen(); if (!db) return;
+  try{
+    const tx = db.transaction(IDB_STORE, "readwrite");
+    const store = tx.objectStore(IDB_STORE);
+    store.add(entry);
+    /* Prune inside the same transaction: keep only the newest entries. */
+    const keysReq = store.getAllKeys();
+    keysReq.onsuccess = ()=>{
+      const keys = keysReq.result || [];
+      for (let i = 0; i < keys.length - HISTORY_MAX; i++) store.delete(keys[i]);
+    };
+  }catch(e){}
+}
+async function historyAll(){
+  const db = await idbOpen(); if (!db) return null;
+  return new Promise((resolve)=>{
+    try{
+      const req = db.transaction(IDB_STORE, "readonly").objectStore(IDB_STORE).getAll();
+      req.onsuccess = ()=> resolve(req.result || []);
+      req.onerror = ()=> resolve(null);
+    }catch(e){ resolve(null); }
+  });
+}
+async function historyDelete(id){
+  const db = await idbOpen(); if (!db) return;
+  try{ db.transaction(IDB_STORE, "readwrite").objectStore(IDB_STORE).delete(id); }catch(e){}
+}
+async function historyClear(){
+  const db = await idbOpen(); if (!db) return;
+  try{ db.transaction(IDB_STORE, "readwrite").objectStore(IDB_STORE).clear(); }catch(e){}
+}
+let historyUrls = [];
+async function renderHistory(){
+  const card = $("historyCard"), list = $("historyList");
+  if (!card || !list) return;
+  const rows = await historyAll();
+  if (rows === null){ card.classList.add("hidden"); return; }
+  historyUrls.forEach(u=>{ try{ URL.revokeObjectURL(u); }catch(e){} });
+  historyUrls = [];
+  list.innerHTML = "";
+  rows.sort((x, y)=> (y.id || 0) - (x.id || 0));
+  card.classList.toggle("hidden", rows.length === 0);
+  rows.forEach(entry=>{
+    const row = document.createElement("div"); row.className = "histRow";
+    const head = document.createElement("div"); head.className = "histHead";
+    const title = document.createElement("span");
+    title.textContent = (MODE_NAMES[entry.mode] || entry.mode) + (entry.voiceLabel ? " · " + entry.voiceLabel : "");
+    const when = document.createElement("span"); when.className = "histWhen";
+    try{ when.textContent = new Date(entry.ts).toLocaleString(); }catch(e){}
+    head.appendChild(title); head.appendChild(when); row.appendChild(head);
+    if (entry.textSnippet){
+      const sn = document.createElement("div"); sn.className = "histSnippet"; sn.textContent = entry.textSnippet;
+      row.appendChild(sn);
+    }
+    const mount = document.createElement("div"); row.appendChild(mount);
+    let url = "";
+    try{ url = URL.createObjectURL(entry.blob); if (url) historyUrls.push(url); }catch(e){}
+    const audio = document.createElement("audio");
+    audio.preload = "metadata";
+    if (url) audio.src = url;
+    makePlayer(audio, mount, { compact:true });
+    const foot = document.createElement("div"); foot.className = "histFoot";
+    const dl = document.createElement("a");
+    dl.className = "dlBtn"; dl.href = url || "#"; dl.download = entry.fileName || "burmese-tts.wav";
+    dl.textContent = "⬇️ ဒေါင်းလုပ်ဆွဲ";
+    const del = document.createElement("button");
+    del.type = "button"; del.className = "small"; del.textContent = "🗑";
+    del.setAttribute("aria-label", "Delete history entry");
+    del.addEventListener("click", async ()=>{ await historyDelete(entry.id); renderHistory(); });
+    foot.appendChild(dl); foot.appendChild(del); row.appendChild(foot);
+    list.appendChild(row);
+  });
+}
+function saveHistoryEntry(entry){
+  (async ()=>{ try{ await historyAdd(entry); }catch(e){} renderHistory(); })();
 }
 
 /* ---------------- generators ---------------- */
@@ -1338,6 +1682,13 @@ async function showResult(blob, mode, chars, ext){
 /* Long-text chunk sizes for the Pro engines (Edge uses 550 inline). */
 const EL_CHUNK_MAX = 800;
 const GEM_CHUNK_MAX = 550;
+/* F5 Clone is only reliable to ~300 chars per job and the VoxCPM backend
+   takes one short text per call, so long texts for those two are split into
+   small chunks (capped) and stitched back into one WAV, like Edge/EL/Gemini. */
+const F5_CHUNK_MAX = 260;
+const F5_MAX_CHUNKS = 10;
+const VOX_CHUNK_MAX = 300;
+const VOX_MAX_CHUNKS = 10;
 
 /* ===== FIX_VOICE_TEXT_BEGIN ===== */
 /* "✨ စာပြင်": prepare textarea text for Burmese TTS —
@@ -1401,6 +1752,67 @@ function fixVoiceText(str){
 }
 /* ===== FIX_VOICE_TEXT_END ===== */
 
+/* ---------------- ✨ စာပြင် fixed-state chips + editor sheet ----------------
+   A text area is FIXED ⇔ its current value equals the snapshot taken at
+   fix time (quick-fix button, or an in-sheet auto-fix that gets saved).
+   Any later manual edit makes value ≠ snapshot, so the chip flips back
+   to the amber reminder on its own — no flag to keep in sync. Generation
+   is never blocked; the chip is a reminder only. */
+const FIX_TEXT_IDS = ["edgeText","elText","gemText","f5Text","voxText"];
+const fixSnapshots = {};   /* textId -> value at fix time */
+const FIX_MSG_FIXED = "✓ စာပြင်ပြီးသား";
+const FIX_MSG_TODO  = "⚠️ စာ မပြင်ရသေးပါ — အသံ မထုတ်ခင် ပြင်သင့်ပါတယ်";
+function paintFixChip(chip, value, snapshot){
+  if (!chip) return;
+  if (!String(value || "").trim()){ chip.classList.add("hidden"); chip.textContent = ""; return; }
+  chip.classList.remove("hidden");
+  if (snapshot !== null && snapshot !== undefined && snapshot === value){
+    chip.className = "fixChip ok"; chip.textContent = FIX_MSG_FIXED;
+  } else {
+    chip.className = "fixChip warn"; chip.textContent = FIX_MSG_TODO;
+  }
+}
+function renderFixChip(ta){
+  if (!ta) return;
+  paintFixChip($("fixChip-" + ta.id), ta.value, fixSnapshots[ta.id]);
+}
+/* Editor-sheet session state: which pane textarea is being edited, and
+   the editor content as of the last in-sheet auto-fix (seeded with the
+   source value on open when the source is already fixed, so a no-change
+   save keeps the fixed state). */
+let fixEditId = null;
+let fixEditSnapshot = null;
+function renderFixEditorChip(){
+  paintFixChip($("fixEditorChip"), $("fixEditorText").value, fixEditSnapshot);
+}
+function openFixEditor(id){
+  const ta = $(id); if (!ta) return;
+  fixEditId = id;
+  $("fixEditorText").value = ta.value;
+  fixEditSnapshot = (fixSnapshots[id] !== undefined && fixSnapshots[id] === ta.value) ? ta.value : null;
+  renderFixEditorChip();
+  openSheetEl($("sheetFix"));
+}
+function autoFixInEditor(){
+  const ed = $("fixEditorText");
+  ed.value = fixVoiceText(ed.value);
+  fixEditSnapshot = ed.value;
+  renderFixEditorChip();
+}
+function saveFixEditor(){
+  const ta = fixEditId ? $(fixEditId) : null; if (!ta) return;
+  const val = $("fixEditorText").value;
+  ta.value = val;
+  /* Fixed only when what is saved is exactly an auto-fixed result (or the
+     untouched already-fixed text seeded on open); hand-edited saves keep
+     value ≠ snapshot, so the pane chip shows the amber reminder. */
+  if (fixEditSnapshot !== null && val === fixEditSnapshot) fixSnapshots[ta.id] = val;
+  ta.dispatchEvent(new Event("input", { bubbles:true }));
+  fixEditId = null; fixEditSnapshot = null;
+  closeSheets();
+  setMsg("statusMsg", "💾 သိမ်းပြီးပါပြီ", "ok");
+}
+
 function splitSentences(text){
   const out = []; let cur = "";
   for (const ch of text){
@@ -1448,6 +1860,16 @@ function concatAudioBuffers(ctx, bufs){
     }
   }
   return new Blob([encodeWav(out)], { type: "audio/wav" });
+}
+/* Decode chunk blobs and stitch them into one WAV — the same decode+concat
+   pattern Edge/EL/Gemini run inline, factored out for the F5/Vox chunk loops. */
+async function stitchChunkBlobs(blobs){
+  const ctx = audioCtx();
+  const bufs = [];
+  for (const blob of blobs) bufs.push(await ctx.decodeAudioData(await blob.arrayBuffer()));
+  const wav = concatAudioBuffers(ctx, bufs);
+  if (ctx.close) ctx.close();
+  return wav;
 }
 
 async function genEdge(){
@@ -1497,10 +1919,11 @@ async function genEl(){
   busy(true); showWake(false);
   try{
     const voice_id = $("elVoice").value;
+    const speed = parseFloat($("elSpeed").value) || 1;
     const fetchChunk = async (t)=>{
       const resp = await apiFetch("/api/pub/el/tts", {
         method:"POST", headers: proHeadersFor("el", { "Content-Type":"application/json" }),
-        body: JSON.stringify({ text: t, voice_id, model_id: "eleven_v4" })
+        body: JSON.stringify({ text: t, voice_id, model_id: "eleven_v4", speed })
       });
       if (!resp.ok) throw new Error(await apiErrorText(resp));
       return await resp.blob();
@@ -1651,6 +2074,37 @@ async function genGemini(){
   busy(false);
 }
 
+/* One F5 clone job end-to-end (create → poll → audio blob), with the same
+   request/poll handling and per-job deadline as the single-job flow in
+   genF5 — factored out so long texts can run one job per chunk. */
+async function f5JobBlob(chunkText, refText, file){
+  const fd = new FormData();
+  fd.append("text", chunkText); fd.append("ref_text", refText);
+  fd.append("speed", $("f5Speed").value); fd.append("ref_audio", file);
+  const resp = await apiFetch("/api/pub/clone/jobs", { method:"POST", headers: proHeadersFor("f5"), body: fd });
+  if (!resp.ok) throw new Error(await apiErrorText(resp));
+  const job = await resp.json();
+  const jobId = job.job_id || job.id;
+  if (!jobId) throw new Error("Job ID မရပါ။");
+  // poll
+  const deadline = Date.now() + 5*60*1000;
+  while (Date.now() < deadline){
+    await new Promise(r=>setTimeout(r, 3000));
+    const pr = await apiFetch("/api/pub/clone/jobs/" + encodeURIComponent(jobId), { headers: proHeadersFor("f5") });
+    if (!pr.ok) throw new Error(await apiErrorText(pr));
+    const st = await pr.json();
+    const status = (st.status || st.state || "").toLowerCase();
+    if (["done","completed","complete","success","succeeded"].includes(status)){
+      const ar = await apiFetch("/api/pub/clone/jobs/" + encodeURIComponent(jobId) + "/audio", { headers: proHeadersFor("f5") });
+      if (!ar.ok) throw new Error(await apiErrorText(ar));
+      return await ar.blob();
+    }
+    if (["error","failed","failure"].includes(status)) throw new Error(st.error || st.detail || "Clone job မအောင်မြင်ပါ။");
+    setMsg("statusMsg", "⏳ Clone လုပ်နေပါတယ်... (" + (st.status||"running") + ")", "info");
+  }
+  throw new Error("အချိန် ကြာလွန်း နေပါတယ် — ခဏနေ ပြန် စမ်းပါ။");
+}
+
 async function genF5(){
   if (disabledModes.includes("f5")) return setMsg("statusMsg", "⛔ ဒီ TTS ကို admin က ပိတ်ထားပါတယ်။", "err");
   if (!proUnlocked("f5")) return setMsg("statusMsg", PRO_LOCKED_TEXT, "err");
@@ -1660,6 +2114,25 @@ async function genF5(){
   if (!file) return setMsg("statusMsg", "နမူနာ အသံဖိုင် အရင် ရွေးပါ။", "err");
   if (!refText) return setMsg("statusMsg", "နမူနာ အသံထဲက စာသား ရေးပါ။", "err");
   if (!text) return setMsg("statusMsg", "ပြောမယ့် စာသား အသစ် ရေးပါ။", "err");
+  if (text.length > F5_CHUNK_MAX){
+    /* Long text: F5 is only reliable to ~300 chars per run, so split at
+       sentence boundaries into <=260-char chunks, run one clone job per
+       chunk sequentially, and stitch the results into a single WAV. */
+    const chunks = splitEdgeText(text, F5_CHUNK_MAX);
+    if (chunks.length > F5_MAX_CHUNKS)
+      return setMsg("statusMsg", "စာသား ရှည်လွန်း နေပါတယ် — F5 Clone က တခါ ထုတ်ရင် အများဆုံး အပိုင်း " + F5_MAX_CHUNKS + " ပိုင်း (" + (F5_CHUNK_MAX * F5_MAX_CHUNKS) + " လုံး ခန့်) ပဲ ရပါတယ်။ စာသား လျှော့ ရေးပါ။", "err");
+    busy(true, "Clone job ပို့နေပါတယ်..."); showWake(false);
+    try{
+      const blobs = [];
+      for (let i = 0; i < chunks.length; i++){
+        setMsg("statusMsg", "အပိုင်း " + (i+1) + "/" + chunks.length + " ထုတ်နေပါတယ်...", "info");
+        blobs.push(await f5JobBlob(chunks[i], refText, file));
+      }
+      showResult(await stitchChunkBlobs(blobs), "f5", text.length, ".wav");
+    }catch(e){ handleGenError(e); }
+    busy(false);
+    return;
+  }
   busy(true, "Clone job ပို့နေပါတယ်..."); showWake(false);
   try{
     const fd = new FormData();
@@ -1702,13 +2175,32 @@ async function genVox(){
   if (!file) return setMsg("statusMsg", "နမူနာ အသံဖိုင် အရင် ရွေးပါ။", "err");
   if (!refText) return setMsg("statusMsg", "နမူနာ အသံထဲက စာသား ရေးပါ။", "err");
   if (!text) return setMsg("statusMsg", "ပြောမယ့် စာသား ရေးပါ။", "err");
+  /* Long text: one /tts call per <=300-char chunk, stitched into one WAV. */
+  let chunks = null;
+  if (text.length > VOX_CHUNK_MAX){
+    chunks = splitEdgeText(text, VOX_CHUNK_MAX);
+    if (chunks.length > VOX_MAX_CHUNKS)
+      return setMsg("statusMsg", "စာသား ရှည်လွန်း နေပါတယ် — VoxCPM က တခါ ထုတ်ရင် အများဆုံး အပိုင်း " + VOX_MAX_CHUNKS + " ပိုင်း (" + (VOX_CHUNK_MAX * VOX_MAX_CHUNKS) + " လုံး ခန့်) ပဲ ရပါတယ်။ စာသား လျှော့ ရေးပါ။", "err");
+  }
   busy(true); showWake(false);
   try{
-    const fd = new FormData();
-    fd.append("text", text); fd.append("ref_text", refText); fd.append("ref_audio", file);
-    const resp = await voxFetch("/api/pub/vox/tts", { method:"POST", body: fd });
-    if (!resp.ok) throw new Error(await apiErrorText(resp));
-    showResult(await resp.blob(), "vox", text.length, ".wav");
+    const fetchChunk = async (t)=>{
+      const fd = new FormData();
+      fd.append("text", t); fd.append("ref_text", refText); fd.append("ref_audio", file);
+      const resp = await voxFetch("/api/pub/vox/tts", { method:"POST", body: fd });
+      if (!resp.ok) throw new Error(await apiErrorText(resp));
+      return await resp.blob();
+    };
+    if (!chunks){
+      showResult(await fetchChunk(text), "vox", text.length, ".wav");
+    } else {
+      const blobs = [];
+      for (let i = 0; i < chunks.length; i++){
+        setMsg("statusMsg", "အပိုင်း " + (i+1) + "/" + chunks.length + " ထုတ်နေပါတယ်...", "info");
+        blobs.push(await fetchChunk(chunks[i]));
+      }
+      showResult(await stitchChunkBlobs(blobs), "vox", text.length, ".wav");
+    }
   }catch(e){ handleGenError(e); }
   busy(false);
   refreshProLocks();
@@ -1743,6 +2235,38 @@ async function signUp(){
   if (data && data.session) setMsg("authMsg", "✅ အကောင့် ဖွင့်ပြီး ဝင်ပြီးပါပြီ။", "ok");
   else setMsg("authMsg", "✅ အကောင့် ဖွင့်ပြီးပါပြီ။ Email ထဲက confirmation link ကို နှိပ်ပြီးမှ ဝင်ပါ။", "ok");
 }
+/* Password reset: email a recovery link; the link returns here with a
+   PASSWORD_RECOVERY auth event (see the auth wiring), which reveals the
+   new-password form on this same card. */
+async function forgotPassword(){
+  if (!sb) return setMsg("authMsg", "Supabase မချိတ်ရသေးပါ။", "err");
+  const email = $("authEmail").value.trim();
+  if (!email){
+    setMsg("authMsg", "Password ပြန် သတ်မှတ်ဖို့ Email အရင် ထည့်ပါ။", "err");
+    try{ $("authEmail").focus(); }catch(e){}
+    return;
+  }
+  setMsg("authMsg", "Email ပို့နေပါတယ်...", "info");
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: "https://ubaaye.github.io/burmese-voice-tts-app/"
+  });
+  if (error) setMsg("authMsg", "ပို့မရပါ: " + error.message, "err");
+  else setMsg("authMsg", "✅ Password ပြန် သတ်မှတ်ဖို့ link ကို " + email + " ဆီ ပို့ပြီးပါပြီ။ Email ထဲက link ကို နှိပ်ပါ။", "ok");
+}
+async function setNewPassword(){
+  if (!sb) return setMsg("authMsg", "Supabase မချိတ်ရသေးပါ။", "err");
+  const pw = $("newPass").value;
+  if (!pw || pw.length < 6) return setMsg("authMsg", "Password အနည်းဆုံး ၆ လုံး ရှိရပါမယ်။", "err");
+  setMsg("authMsg", "သတ်မှတ်နေပါတယ်...", "info");
+  const { error } = await sb.auth.updateUser({ password: pw });
+  if (error) return setMsg("authMsg", "သတ်မှတ် မရပါ: " + error.message, "err");
+  $("newPass").value = "";
+  $("recoveryBox").classList.add("hidden");
+  recoveryMode = false;
+  renderAuth();
+  if (session) setMsg("statusMsg", "✅ Password အသစ် သတ်မှတ်ပြီးပါပြီ။", "ok");
+  else setMsg("authMsg", "✅ Password အသစ် သတ်မှတ်ပြီးပါပြီ။ ပြန် ဝင်ပါ။", "ok");
+}
 async function signInWithGoogle(){
   if (!sb) return setMsg("authMsg", "Supabase မချိတ်ရသေးပါ။", "err");
   setMsg("authMsg", "Google နဲ့ ဝင်နေပါတယ်...", "info");
@@ -1766,14 +2290,17 @@ function backToLanding(){
 }
 function renderAuth(){
   const logged = !!session;
-  if (logged) authRevealed = false;
-  $("landingView").classList.toggle("hidden", logged || authRevealed);
-  $("loginCard").classList.toggle("hidden", logged || !authRevealed);
-  $("appArea").classList.toggle("hidden", !logged);
-  $("btnMenu").classList.toggle("hidden", !logged);
-  if (!logged){ closeDrawer(); closeSheets(); }
+  if (logged && !recoveryMode) authRevealed = false;
+  /* During password recovery a session exists, but the user must stay on
+     the auth card to set the new password — the app stays hidden. */
+  const showApp = logged && !recoveryMode;
+  $("landingView").classList.toggle("hidden", showApp || authRevealed || recoveryMode);
+  $("loginCard").classList.toggle("hidden", showApp || (!authRevealed && !recoveryMode));
+  $("appArea").classList.toggle("hidden", !showApp);
+  $("btnMenu").classList.toggle("hidden", !showApp);
+  if (!showApp){ closeDrawer(); closeSheets(); }
   if (logged) $("userEmail").textContent = "👤 " + (session.user.email || "");
-  $("ownerBadge").classList.toggle("hidden", !(logged && isOwner()));
+  $("ownerBadge").classList.toggle("hidden", !(showApp && isOwner()));
 }
 function openDrawer(){
   $("drawer").classList.add("open");
@@ -1915,6 +2442,41 @@ function openEngineSheet(){
   }, {});
 }
 
+/* ---------------- text drafts (localStorage) ----------------
+   The five engine text areas + the two clone reference-text areas are
+   persisted as the user types (debounced) and restored on load, so a
+   reload or an accidental tab close never loses a long script. Nothing
+   else is persisted. */
+const DRAFT_IDS = ["edgeText", "elText", "gemText", "f5Text", "voxText", "f5RefText", "voxRefText"];
+const _draftTimers = {};
+function initDrafts(){
+  DRAFT_IDS.forEach(id=>{
+    const ta = $(id); if (!ta) return;
+    try{
+      const saved = localStorage.getItem("bvtts_pub_draft_" + id);
+      if (saved !== null) ta.value = saved;
+    }catch(e){}
+    /* Fire input so counters, fix-state chips and this saver all see the
+       restored value exactly as if it had just been typed. */
+    ta.dispatchEvent(new Event("input", { bubbles: true }));
+    ta.addEventListener("input", ()=>{
+      clearTimeout(_draftTimers[id]);
+      _draftTimers[id] = setTimeout(()=>{
+        try{ localStorage.setItem("bvtts_pub_draft_" + id, ta.value); }catch(e){}
+      }, 400);
+    });
+  });
+}
+/* PWA: register the conservative network-first service worker (https only). */
+function registerServiceWorker(){
+  try{
+    if ("serviceWorker" in navigator && location.protocol === "https:"){
+      const p = navigator.serviceWorker.register("sw.js");
+      if (p && p.catch) p.catch(()=>{});
+    }
+  }catch(e){}
+}
+
 /* ---------------- wiring ---------------- */
 function fillGeminiVoices(){
   ["gemVoice","spk1Voice","spk2Voice"].forEach(id=>{
@@ -1927,7 +2489,7 @@ function fillGeminiVoices(){
   syncSelectButton("spk2Voice");
 }
 function init(){
-  resultPlayer = makePlayer($("player"), $("resultPlayer"));
+  resultPlayer = makePlayer($("player"), $("resultPlayer"), { loop:true });
   attachUploadPreview("f5Ref", "f5RefPreview");
   attachUploadPreview("voxRef", "voxRefPreview");
   attachUploadPreview("elCloneSample", "elCloneSamplePreview");
@@ -1958,6 +2520,7 @@ function init(){
   sliderSync("edgeRate","edgeRateVal", v=>v+"%");
   sliderSync("edgePitch","edgePitchVal", v=>(v>0?"+"+v:""+v)+" Hz");
   sliderSync("f5Speed","f5SpeedVal", v=>parseFloat(v).toFixed(2).replace(/0$/,"")+"×");
+  sliderSync("elSpeed","elSpeedVal", v=>parseFloat(v).toFixed(2).replace(/0$/,"")+"×");
 
   const vol = $("volSlider");
   const savedVol = localStorage.getItem("bvtts_pub_volume");
@@ -1981,15 +2544,54 @@ function init(){
     b.addEventListener("click", ()=>{
       const ta = $(b.dataset.fix); if (!ta) return;
       ta.value = fixVoiceText(ta.value);
+      /* Snapshot BEFORE dispatching "input": the chip renderer runs off
+         that event, and fixed ⇔ value === snapshot — setting it after
+         the dispatch would let the event immediately un-fix the text. */
+      fixSnapshots[ta.id] = ta.value;
       ta.dispatchEvent(new Event("input", { bubbles:true }));
       setMsg("statusMsg", "✨ စာပြင်ပြီးပါပြီ", "ok");
     });
+  });
+  /* ✨ စာပြင် editor sheet: open buttons, per-textarea state chips, and
+     the sheet's own auto-fix / save / live-state wiring. */
+  document.querySelectorAll("[data-fixopen]").forEach(b=>{
+    b.addEventListener("click", ()=> openFixEditor(b.dataset.fixopen));
+  });
+  FIX_TEXT_IDS.forEach(id=>{
+    const ta = $(id); if (!ta) return;
+    ta.addEventListener("input", ()=> renderFixChip(ta));
+    renderFixChip(ta);
+  });
+  $("fixEditorText").addEventListener("input", renderFixEditorChip);
+  $("btnFixAuto").addEventListener("click", autoFixInEditor);
+  $("btnFixSave").addEventListener("click", saveFixEditor);
+  /* Drafts restore AFTER counters + fix chips are wired, so the restored
+     values flow through their input handlers like freshly typed text. */
+  initDrafts();
+  renderHistory();
+  registerServiceWorker();
+  $("btnShare").addEventListener("click", shareResult);
+  $("btnClearHistory").addEventListener("click", async ()=>{
+    if (!window.confirm("History အားလုံး ဖျက်မှာ သေချာလား?")) return;
+    await historyClear();
+    renderHistory();
   });
   document.querySelectorAll("[data-prolock]").forEach(el=>{
     el.addEventListener("click", e=>{ if (e.target.closest("[data-open-key-drawer]")) openKeysSheet(); });
   });
   $("btnSignIn").addEventListener("click", signIn);
   $("btnSignUp").addEventListener("click", signUp);
+  $("btnForgot").addEventListener("click", forgotPassword);
+  $("btnSetPass").addEventListener("click", setNewPassword);
+  /* Password-recovery return: the email link lands back here with
+     type=recovery in the URL hash — surface the new-password form. */
+  try{
+    if ((location.hash || "").includes("type=recovery")){
+      recoveryMode = true;
+      authRevealed = true;
+      $("recoveryBox").classList.remove("hidden");
+    }
+  }catch(e){}
   $("btnLandingLogin").addEventListener("click", showAuthCard);
   $("btnLandingSignup").addEventListener("click", showAuthCard);
   $("btnNavLogin").addEventListener("click", showAuthCard);
@@ -2037,14 +2639,20 @@ function init(){
 
   if (sb){
     sb.auth.onAuthStateChange(async (_evt, sess)=>{
+      if (_evt === "PASSWORD_RECOVERY"){
+        recoveryMode = true;
+        authRevealed = true;
+        $("recoveryBox").classList.remove("hidden");
+      }
       session = sess;
+      if (sess) sessionDeadHandled = false;
       renderAuth();
-      if (sess){ await loadKeys(); await loadControls(); await loadVoxStatus(); }
-      else { resetKeys(); voxStatus = { enabled:false, available:false, loaded:false }; renderVoxStatus(); refreshProLocks(); }
+      if (sess){ await loadKeys(); await loadControls(); await loadVoxStatus(); loadUsage(); }
+      else { resetKeys(); const uc = $("usageCard"); if (uc) uc.classList.add("hidden"); voxStatus = { enabled:false, available:false, loaded:false }; renderVoxStatus(); refreshProLocks(); }
     });
     sb.auth.getSession().then(async ({data})=>{
       session = data.session; renderAuth();
-      if (session){ await loadKeys(); await loadControls(); await loadVoxStatus(); }
+      if (session){ await loadKeys(); await loadControls(); await loadVoxStatus(); loadUsage(); }
     });
   }
   renderVoxStatus();
