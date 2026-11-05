@@ -573,6 +573,10 @@
           </div>
           <div class="muted">စာသားကို <b>Aung: ...</b> / <b>May: ...</b> ဆိုပြီး တစ်ကြောင်းစီ ရေးပါ။ (တစ်ယောက်တည်း အသံ ဆိုရင် ဒီ အဆင့်ကို ကျော်လို့ ရပါတယ်။)</div>
         </div>
+        <div class="chipRow hidden" id="spkChips" style="margin-top:8px;">
+          <button type="button" class="chip" id="spkChip1"></button>
+          <button type="button" class="chip" id="spkChip2"></button>
+        </div>
         <div style="text-align:right;margin-top:10px;"><button type="button" class="small" data-reset-pane="gemini">↺ Reset</button></div>
         <div class="proLock hidden" data-prolock></div>
       </div>
@@ -927,6 +931,91 @@ function applyPerLineStyle(tag){
   ta.focus();
   const cur = anchor + prefix.length;
   ta.setSelectionRange(cur, cur);
+}
+
+/* ---------------- Dialogue speaker name chips ----------------
+   Once BOTH speaker names are typed, they appear as chips under the
+   duo box; tapping one inserts (or swaps) that speaker's "Name: "
+   turn prefix in #gemText, so dialogue turns never need the prefix
+   typed by hand. The chips produce exactly the prefixes the server
+   (and applyPerLineStyle's dialogue anchoring) already understand.
+   The names themselves are persisted (bvtts_pub_spk1name /
+   bvtts_pub_spk2name) and restored on load, like the text drafts. */
+/* Last known cursor position in #gemText, tracked in init() off its
+   focus/click/keyup/select/input events: by the time a chip's click
+   handler runs, focus has already moved to the chip button, so the
+   live selection is not always the one the user left in the text. */
+let _gemCursor = null;
+function spkNames(){
+  const n1 = $("spk1Name"), n2 = $("spk2Name");
+  return [n1 ? n1.value.trim() : "", n2 ? n2.value.trim() : ""];
+}
+function renderSpkChips(){
+  const row = $("spkChips"); if (!row) return;
+  const duo = $("gemDuo");
+  const [n1, n2] = spkNames();
+  row.classList.toggle("hidden", !(duo && duo.checked && n1 && n2));
+  if (n1) $("spkChip1").textContent = "🗣 " + n1;
+  if (n2) $("spkChip2").textContent = "🗣 " + n2;
+}
+function saveSpkNames(){
+  try{
+    localStorage.setItem("bvtts_pub_spk1name", $("spk1Name").value);
+    localStorage.setItem("bvtts_pub_spk2name", $("spk2Name").value);
+  }catch(e){}
+}
+function restoreSpkNames(){
+  try{
+    const v1 = localStorage.getItem("bvtts_pub_spk1name");
+    const v2 = localStorage.getItem("bvtts_pub_spk2name");
+    if (v1 !== null) $("spk1Name").value = v1;
+    if (v2 !== null) $("spk2Name").value = v2;
+  }catch(e){}
+  renderSpkChips();
+}
+/* Tap a speaker chip: put that speaker's turn at the cursor's line in
+   #gemText — swap the name on an already-prefixed line (the rest of
+   the line, incl. any [tag] after the prefix, is untouched), fill an
+   empty line, or start a new turn at the cursor on a text line. */
+function insertSpkTurn(name){
+  const ta = $("gemText"); if (!ta || !name) return;
+  const val = ta.value;
+  const prefix = name + ": ";
+  /* Cursor position: the live selection while the textarea is focused,
+     else the last tracked cursor, else (never interacted) end of text. */
+  let pos = val.length;
+  if (document.activeElement === ta && typeof ta.selectionStart === "number" && ta.selectionStart !== null)
+    pos = ta.selectionStart;
+  else if (_gemCursor !== null)
+    pos = _gemCursor;
+  pos = Math.max(0, Math.min(pos, val.length));
+  const lineStart = val.lastIndexOf("\n", pos - 1) + 1;
+  let lineEnd = val.indexOf("\n", pos);
+  if (lineEnd === -1) lineEnd = val.length;
+  const line = val.slice(lineStart, lineEnd);
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const names = spkNames().filter(Boolean).map(esc);
+  const pm = names.length
+    ? new RegExp("^(\\s*)(" + names.join("|") + ")(\\s*:)").exec(line) : null;
+  let cur;
+  if (pm){
+    /* Swap ONLY the name (group 2); leading space, ":" and everything
+       after it stay exactly as they were. */
+    const nameAt = lineStart + pm[1].length;
+    ta.value = val.slice(0, nameAt) + name + val.slice(nameAt + pm[2].length);
+    cur = nameAt + name.length + pm[3].length;
+    if (ta.value[cur] === " ") cur += 1;     /* and past its space */
+  } else if (!line.trim()){
+    ta.value = val.slice(0, lineStart) + prefix + val.slice(lineEnd);
+    cur = lineStart + prefix.length;
+  } else {
+    ta.value = val.slice(0, pos) + "\n" + prefix + val.slice(pos);
+    cur = pos + 1 + prefix.length;
+  }
+  ta.dispatchEvent(new Event("input", { bubbles:true }));
+  ta.focus();
+  ta.setSelectionRange(cur, cur);
+  _gemCursor = cur;
 }
 
 /* ---------------- small helpers ---------------- */
@@ -1741,8 +1830,9 @@ function resetPane(mode){
     if (sel && sel.options.length) setSel("elVoice", sel.options[0].value);
     setRange("elSpeed", "1");
   } else if (mode === "gemini"){
-    /* Defaults from fillGeminiVoices(); style text + speaker names are
-       text fields and stay untouched. */
+    /* Defaults from fillGeminiVoices(); the style text field stays
+       untouched. Speaker names ARE cleared (fields + saved values),
+       like the pane's other settings. */
     setSel("gemVoice", "Kore");
     setSel("spk1Voice", "Kore");
     setSel("spk2Voice", "Puck");
@@ -1750,6 +1840,14 @@ function resetPane(mode){
     if (duo && duo.checked){ duo.checked = false; duo.dispatchEvent(new Event("change", { bubbles:true })); }
     const perLine = $("gemPerLine");
     if (perLine) perLine.checked = false;
+    const sn1 = $("spk1Name"), sn2 = $("spk2Name");
+    if (sn1) sn1.value = "";
+    if (sn2) sn2.value = "";
+    try{
+      localStorage.removeItem("bvtts_pub_spk1name");
+      localStorage.removeItem("bvtts_pub_spk2name");
+    }catch(e){}
+    renderSpkChips();
   } else if (mode === "f5"){
     setRange("f5Speed", "1");                   /* markup value="1" */
   }
@@ -2984,7 +3082,19 @@ function init(){
   const volUpd = ()=>{ $("volVal").textContent = vol.value+"%"; localStorage.setItem("bvtts_pub_volume", vol.value); };
   vol.addEventListener("input", volUpd); volUpd();
 
-  $("gemDuo").addEventListener("change", e=> $("gemDuoBox").classList.toggle("hidden", !e.target.checked));
+  $("gemDuo").addEventListener("change", e=>{ $("gemDuoBox").classList.toggle("hidden", !e.target.checked); renderSpkChips(); });
+  /* Speaker name chips: names save + chips re-label on every keystroke;
+     a chip tap inserts that speaker's turn prefix into #gemText. */
+  ["spk1Name","spk2Name"].forEach(id=>{
+    $(id).addEventListener("input", ()=>{ saveSpkNames(); renderSpkChips(); });
+  });
+  $("spkChip1").addEventListener("click", ()=> insertSpkTurn(spkNames()[0]));
+  $("spkChip2").addEventListener("click", ()=> insertSpkTurn(spkNames()[1]));
+  ["focus","click","keyup","select","input"].forEach(ev=>
+    $("gemText").addEventListener(ev, ()=>{
+      const t = $("gemText");
+      if (typeof t.selectionStart === "number") _gemCursor = t.selectionStart;
+    }));
   $("btnGenerate").addEventListener("click", generate);
   $("btnRetry").addEventListener("click", ()=>{ showWake(false); generate(); });
   $("btnCancelGen").addEventListener("click", ()=>{ if (genCtl) genCtl.abort(); });
@@ -3035,6 +3145,8 @@ function init(){
   $("fixEditorText").addEventListener("input", renderFixEditorChip);
   $("btnFixAuto").addEventListener("click", autoFixInEditor);
   $("btnFixSave").addEventListener("click", saveFixEditor);
+  /* Speaker names restore with the drafts (chips render off them). */
+  restoreSpkNames();
   /* Drafts restore AFTER counters + fix chips are wired, so the restored
      values flow through their input handlers like freshly typed text. */
   initDrafts();
