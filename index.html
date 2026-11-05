@@ -101,6 +101,19 @@
   .profileHead{width:100%;text-align:left;font-weight:700;font-size:15px;display:flex;justify-content:space-between;align-items:center;}
   .notice{background:rgba(77,163,255,.10);border:1px solid rgba(77,163,255,.35);border-radius:10px;
     padding:9px 11px;font-size:12.5px;line-height:1.65;margin-top:10px;color:#cfe4ff;}
+  /* Landing view (signed-out first impression: samples + features + how-to) */
+  .landingPitch{font-size:14.5px;line-height:1.65;margin:4px 0 12px;}
+  .sampleRow{padding:9px 0;border-top:1px solid rgba(255,255,255,.08);}
+  .sampleRow:first-of-type{border-top:none;padding-top:2px;}
+  .sampleLabel{font-size:13.5px;font-weight:600;margin-bottom:2px;}
+  .landingList{margin:4px 0 0;padding-left:20px;line-height:1.8;font-size:13.5px;}
+  .landingSteps{margin:4px 0 0;padding-left:24px;line-height:1.8;font-size:13.5px;}
+  /* Google sign-in button (proper Google styling: white bg, dark text) */
+  .btnGoogle{width:100%;background:#fff;color:#1f1f1f;border:1px solid #dadce0;font-weight:600;
+    display:flex;align-items:center;justify-content:center;gap:10px;padding:11px 13px;font-size:14.5px;}
+  .btnGoogle .gMark{font-weight:800;font-size:16px;color:#4285f4;font-family:Arial,sans-serif;line-height:1;}
+  .authDivider{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin:14px 0 2px;}
+  .authDivider::before,.authDivider::after{content:"";flex:1;height:1px;background:var(--glass-border);}
   .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);
     border-top-color:#fff;border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-2px;margin-right:6px;}
   @keyframes sp{to{transform:rotate(360deg)}}
@@ -185,12 +198,74 @@
 
   <div id="configWarn" class="warn hidden">⚠️ Supabase ချိတ်ဆက်မှု မပြင်ရသေးပါ — deploy လုပ်ချိန်တွင် ပြင်ပါမည်။ (နည်းပညာ အဖွဲ့ အတွက်: SUPABASE_URL / SUPABASE_ANON_KEY)</div>
 
-  <!-- ============ LOGIN (signed-out view: this card ONLY) ============ -->
-  <section id="loginCard" class="card">
+  <!-- ============ LANDING (signed-out first view: samples + features + how-to) ============ -->
+  <div id="landingView">
+    <section class="card">
+      <h2>🎙️ Burmese Voice TTS</h2>
+      <p class="landingPitch">မြန်မာ စာသားကို အသံ ပြောင်းပေးတဲ့ app — အမျိုးသား/အမျိုးသမီး အသံတွေ၊ ကိုယ်ပိုင် အသံ clone တွေနဲ့ အခမဲ့ စမ်းသုံးနိုင်ပါတယ်။</p>
+      <div class="row">
+        <button id="btnLandingLogin" class="primary" type="button">Login ဝင်မယ်</button>
+        <button id="btnLandingSignup" type="button">အကောင့်သစ် ဖွင့်မယ်</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>🔊 နမူနာ အသံ</h2>
+      <div class="sampleRow">
+        <div class="sampleLabel">Edge TTS — သီဟ (အမျိုးသား) · အခမဲ့</div>
+        <div id="sampleThiha"></div>
+      </div>
+      <div class="sampleRow">
+        <div class="sampleLabel">Edge TTS — နီလာ (အမျိုးသမီး) · အခမဲ့</div>
+        <div id="sampleNilar"></div>
+      </div>
+      <div class="sampleRow">
+        <div class="sampleLabel">ElevenLabs — NLO Clone</div>
+        <div id="sampleEl"></div>
+      </div>
+      <div class="sampleRow">
+        <div class="sampleLabel">Gemini — Kore</div>
+        <div id="sampleGemini"></div>
+      </div>
+      <div class="sampleRow">
+        <div class="sampleLabel">VoxCPM Clone (Beta)</div>
+        <div id="sampleVox"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>✨ ရနိုင်တဲ့ Feature တွေ</h2>
+      <ul class="landingList">
+        <li>Edge TTS အခမဲ့</li>
+        <li>ElevenLabs ကိုယ်ပိုင် အသံ clone</li>
+        <li>Gemini အသံ ၃၀ + အသံနေ အသံထား</li>
+        <li>F5 Clone</li>
+        <li>VoxCPM Clone (admin ဖွင့်ထားချိန်သာ)</li>
+        <li>✨ စာပြင် — ဂဏန်း/စာလုံးပေါင်း အလိုအလျောက် ပြင်</li>
+        <li>စာရှည် အလိုအလျောက် ပိုင်းထုတ်</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>📖 သုံးနည်း</h2>
+      <div class="landingSteps">
+        <div>၁။ အကောင့် ဖွင့် / Login ဝင်</div>
+        <div>၂။ Edge TTS ကို တန်း သုံးနိုင် (အခမဲ့)</div>
+        <div>၃။ Pro သုံးချင်ရင် Menu ထဲမှာ ကိုယ့် API key ထည့် (သို့) Pro code သုံး</div>
+        <div>၄။ Engine ရွေး၊ စာရေး၊ "အသံ ထုတ်မယ်" နှိပ်</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ LOGIN (signed-out view, revealed from the landing) ============ -->
+  <section id="loginCard" class="card hidden">
+    <button id="btnAuthBack" class="small" type="button" style="margin-bottom:10px;">← ပြန်သွားမယ်</button>
     <h2>🔐 Login ဝင်ပါ</h2>
     <p class="muted">ဒီ app ကို သုံးရန် အကောင့် ဝင်ထားရပါမယ်။<br>
     • <b>Edge TTS</b> — login ဝင်ပြီးရင် <b>အခမဲ့</b> သုံးနိုင်ပါတယ်။<br>
     • <b>ElevenLabs / Gemini / F5 Clone</b> — <b>Pro</b> feature များ: ကိုယ့် API key ထည့်ရင် code မလိုပါ။ Pro code ရှိရင် owner ရဲ့ key နဲ့ သုံးနိုင်ပါတယ်။</p>
+    <button id="btnGoogle" class="btnGoogle" type="button"><span class="gMark">G</span> Google နဲ့ ဝင်မယ်</button>
+    <div class="authDivider">သို့မဟုတ်</div>
     <label>Email</label>
     <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com">
     <label>Password</label>
@@ -498,6 +573,7 @@ const sb = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
 if (!sb || SUPABASE_URL.includes("YOUR-")) $("configWarn").classList.remove("hidden");
 
 let session = null;                 // Supabase session
+let authRevealed = false;           // signed-out: landing shows first; the auth card appears on demand
 /* Owner bypass: the owner's own login email gets full Pro without a pro code.
    The server verifies the same email from the JWT — this only drives UI gating. */
 function isOwner(){
@@ -843,6 +919,29 @@ function attachUploadPreview(inputId, mountId){
     url = URL.createObjectURL(file);
     api.load(url);
     mount.classList.remove("hidden");
+  });
+}
+
+/* ---------------- landing sample players ----------------
+   Static files beside index.html; plain <audio> elements with
+   preload="none", so nothing downloads (and no login is needed)
+   until a visitor taps play. Reuses the compact custom player. */
+const LANDING_SAMPLES = [
+  ["sampleThiha", "sample-thiha.mp3"],
+  ["sampleNilar", "sample-nilar.mp3"],
+  ["sampleEl", "sample-el.mp3"],
+  ["sampleGemini", "sample-gemini.mp3"],
+  ["sampleVox", "sample-vox.mp3"]
+];
+function initSamplePlayers(){
+  LANDING_SAMPLES.forEach(([id, src])=>{
+    const mount = $(id);
+    if (!mount || mount.dataset.built) return;
+    mount.dataset.built = "1";
+    const audio = document.createElement("audio");
+    audio.preload = "none";
+    audio.src = src;
+    makePlayer(audio, mount, { compact:true });
   });
 }
 
@@ -1483,9 +1582,32 @@ async function signUp(){
   if (data && data.session) setMsg("authMsg", "✅ အကောင့် ဖွင့်ပြီး ဝင်ပြီးပါပြီ။", "ok");
   else setMsg("authMsg", "✅ အကောင့် ဖွင့်ပြီးပါပြီ။ Email ထဲက confirmation link ကို နှိပ်ပြီးမှ ဝင်ပါ။", "ok");
 }
+async function signInWithGoogle(){
+  if (!sb) return setMsg("authMsg", "Supabase မချိတ်ရသေးပါ။", "err");
+  setMsg("authMsg", "Google နဲ့ ဝင်နေပါတယ်...", "info");
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: "https://ubaaye.github.io/burmese-voice-tts-app/" }
+  });
+  if (error) setMsg("authMsg", "ဝင်မရပါ: " + error.message, "err");
+}
+function showAuthCard(){
+  authRevealed = true;
+  if (!session) renderAuth();
+  const card = $("loginCard");
+  if (card && card.scrollIntoView) card.scrollIntoView({ behavior:"smooth", block:"start" });
+}
+function backToLanding(){
+  authRevealed = false;
+  if (!session) renderAuth();
+  const v = $("landingView");
+  if (v && v.scrollIntoView) v.scrollIntoView({ behavior:"smooth", block:"start" });
+}
 function renderAuth(){
   const logged = !!session;
-  $("loginCard").classList.toggle("hidden", logged);
+  if (logged) authRevealed = false;
+  $("landingView").classList.toggle("hidden", logged || authRevealed);
+  $("loginCard").classList.toggle("hidden", logged || !authRevealed);
   $("appArea").classList.toggle("hidden", !logged);
   $("btnMenu").classList.toggle("hidden", !logged);
   if (!logged){ closeDrawer(); closeSheets(); }
@@ -1707,6 +1829,11 @@ function init(){
   });
   $("btnSignIn").addEventListener("click", signIn);
   $("btnSignUp").addEventListener("click", signUp);
+  $("btnLandingLogin").addEventListener("click", showAuthCard);
+  $("btnLandingSignup").addEventListener("click", showAuthCard);
+  $("btnAuthBack").addEventListener("click", backToLanding);
+  $("btnGoogle").addEventListener("click", signInWithGoogle);
+  initSamplePlayers();
   $("btnSignOut").addEventListener("click", async ()=>{ if (sb) await sb.auth.signOut(); });
   $("btnMenu").addEventListener("click", openDrawer);
   $("btnDrawerClose").addEventListener("click", closeDrawer);
