@@ -1596,7 +1596,7 @@ async function saveKeys(){
     hf_token: keys.hf_token, pro_code: keys.pro_code, updated_at: new Date().toISOString()
   }, { onConflict: "user_id" });
   if (error) setMsg("profileMsg", "သိမ်း မရပါ: " + error.message, "err");
-  else { keysSavedAt = new Date().toISOString(); renderKeysStatus(); setMsg("profileMsg", "✅ သိမ်းပြီးပါပြီ။", "ok"); refreshProLocks(); }
+  else { keysSavedAt = new Date().toISOString(); renderKeysStatus(); setMsg("profileMsg", "✅ သိမ်းပြီးပါပြီ။", "ok"); refreshProLocks(); elVoicesScopeDone = ""; initElVoices(); }
 }
 /* ↺ Reset (Keys sheet): wipe every key field AND the saved user_keys row. */
 async function clearSavedKeys(){
@@ -2154,34 +2154,140 @@ async function genEl(){
   }catch(e){ handleGenError(e); }
   busy(false);
 }
+/* ---------------- EL voice list cache (localStorage) ----------------
+   The ElevenLabs picker used to start empty after every reload, so the
+   user had to tap 🔄 before each session. The fetched list (after the
+   NLO-only filter) is now cached locally, restored at sign-in, then
+   silently refreshed. The cache is keyed by a SCOPE — which credential
+   path produced the list plus a one-way hash of that credential — so a
+   key/code change ignores the old cache. Raw keys/codes are NEVER
+   stored, only the hash. */
+const EL_VOICES_CACHE_KEY = "bvtts_pub_elvoices";
+function elScopeHash(str){
+  let h1 = 5381, h2 = 52711;
+  const s = String(str || "");
+  for (let i = 0; i < s.length; i++){
+    const c = s.charCodeAt(i);
+    h1 = ((h1 << 5) + h1 + c) >>> 0;
+    h2 = ((h2 << 5) - h2 + c) >>> 0;
+  }
+  return h1.toString(16) + "x" + h2.toString(16);
+}
+function elVoicesScope(){
+  const via = unlockVia("el");                 /* "own" | "owner" | "code" | "" */
+  let cred = "";
+  if (via === "own") cred = keys.el_key || "";
+  else if (via === "code") cred = keys.pro_code || "";
+  else if (via === "owner") cred = (session && session.user && session.user.id) || "";
+  return via + "|" + (cred ? elScopeHash(cred) : "");
+}
+function readElVoicesCache(){
+  try{
+    const raw = localStorage.getItem(EL_VOICES_CACHE_KEY);
+    if (!raw) return null;
+    const c = JSON.parse(raw);
+    return (c && Array.isArray(c.voices)) ? c : null;
+  }catch(e){ return null; }
+}
+function writeElVoicesCache(voices, selected){
+  try{
+    localStorage.setItem(EL_VOICES_CACHE_KEY, JSON.stringify({
+      ts: Date.now(), scope: elVoicesScope(),
+      voices: voices || [], selected: selected || ""
+    }));
+  }catch(e){}
+}
+function clearElVoicesCache(){
+  try{ localStorage.removeItem(EL_VOICES_CACHE_KEY); }catch(e){}
+}
+/* Fill #elVoice from a [{voice_id, name}] list (already filtered),
+   restoring selectedId when present, else the first option — the same
+   end state a successful fetch produces. Shared by fetch + restore. */
+function populateElVoices(voices, selectedId){
+  const sel = $("elVoice");
+  sel.innerHTML = "";
+  (voices || []).forEach(v=>{
+    if (!v || !v.voice_id) return;
+    const o = document.createElement("option");
+    o.value = v.voice_id;
+    o.textContent = v.name || v.voice_id;
+    sel.appendChild(o);
+  });
+  if (selectedId && sel.querySelector('option[value="' + selectedId + '"]')) sel.value = selectedId;
+  else if (sel.options.length) sel.value = sel.options[0].value;
+  syncSelectButton("elVoice");
+  $("elNoVoices").classList.toggle("hidden", sel.options.length > 0);
+  syncElDeleteBtn();
+}
+/* Persist just the current selection into the cache (picker change). */
+function saveElSelected(){
+  const sel = $("elVoice"); if (!sel) return;
+  const cache = readElVoicesCache();
+  if (cache){
+    if (cache.selected !== sel.value){
+      cache.selected = sel.value;
+      try{ localStorage.setItem(EL_VOICES_CACHE_KEY, JSON.stringify(cache)); }catch(e){}
+    }
+    return;
+  }
+  if (sel.options.length){
+    writeElVoicesCache(Array.from(sel.options).map(o=>({ voice_id:o.value, name:o.textContent })), sel.value);
+  }
+}
+/* Fetch + filter the EL voice list (throws on HTTP error, with .status). */
+async function fetchElVoices(){
+  const resp = await apiFetch("/api/pub/el/voices", { headers: proHeadersFor("el") });
+  if (!resp.ok){ const err = new Error(await apiErrorText(resp)); err.status = resp.status; throw err; }
+  const d = await resp.json();
+  const list = Array.isArray(d) ? d : (d.voices || []);
+  /* Clone voices only: premade English voices (Roger/George/…) are dropped.
+     Entries without a category field (old server shape) are kept. */
+  const clones = list.filter(v=>{
+    const cat = v && v.category;
+    return !cat || cat === "cloned" || cat === "professional";
+  });
+  /* Only the single clone named exactly "NLO" is offered (first match). */
+  const nlo = clones.find(v => ((v && v.name) || "").trim().toLowerCase() === "nlo");
+  const voices = [];
+  if (nlo){
+    const id = nlo.voice_id || nlo.id;
+    if (id) voices.push({ voice_id:id, name:nlo.name || id });
+  }
+  return voices;
+}
 async function loadElVoices(){
   if (elProNotice()) return;
   setMsg("statusMsg", "အသံ စာရင်း ယူနေပါတယ်...", "info");
   try{
-    const resp = await apiFetch("/api/pub/el/voices", { headers: proHeadersFor("el") });
-    if (!resp.ok) throw new Error(await apiErrorText(resp));
-    const d = await resp.json();
-    const list = Array.isArray(d) ? d : (d.voices || []);
-    /* Clone voices only: premade English voices (Roger/George/…) are dropped.
-       Entries without a category field (old server shape) are kept. */
-    const clones = list.filter(v=>{
-      const cat = v && v.category;
-      return !cat || cat === "cloned" || cat === "professional";
-    });
-    /* Only the single clone named exactly "NLO" is offered (first match). */
-    const nlo = clones.find(v => ((v && v.name) || "").trim().toLowerCase() === "nlo");
-    const sel = $("elVoice");
-    sel.innerHTML = "";
-    if (nlo){
-      const id = nlo.voice_id || nlo.id;
-      if (id){ const o=document.createElement("option"); o.value=id; o.textContent=nlo.name || id; sel.appendChild(o); }
-    }
-    if (sel.options.length) sel.value = sel.options[0].value;
-    syncSelectButton("elVoice");
-    $("elNoVoices").classList.toggle("hidden", sel.options.length > 0);
-    setMsg("statusMsg", "✅ အသံ "+sel.options.length+" ခု ရပါပြီ။", "ok");
+    const voices = await fetchElVoices();
+    populateElVoices(voices, $("elVoice").value);
+    writeElVoicesCache(voices, $("elVoice").value);
+    setMsg("statusMsg", "✅ အသံ "+$("elVoice").options.length+" ခု ရပါပြီ။", "ok");
     syncElDeleteBtn();
   }catch(e){ handleGenError(e); }
+}
+/* Sign-in restore: paint the cached list instantly (no network needed),
+   then refresh silently in the background. With no usable cache, one
+   silent fetch runs instead — the 🔄 button is never required after
+   sign-in. Runs once per credential scope. */
+let elVoicesScopeDone = "";
+async function initElVoices(){
+  if (!session || !proUnlocked("el")) return;
+  const scope = elVoicesScope();
+  if (scope === elVoicesScopeDone) return;
+  elVoicesScopeDone = scope;
+  const cache = readElVoicesCache();
+  if (cache && cache.scope === scope) populateElVoices(cache.voices, cache.selected);
+  try{
+    const voices = await fetchElVoices();
+    if (elVoicesScope() !== scope) return;   /* credential changed mid-flight */
+    populateElVoices(voices, $("elVoice").value);
+    writeElVoicesCache(voices, $("elVoice").value);
+  }catch(e){
+    /* Silent: keep whatever the cache gave us. Only an auth failure
+       (401/403) means the credential is likely gone — drop the cache. */
+    if (e && (e.status === 401 || e.status === 403)) clearElVoicesCache();
+  }
 }
 
 function syncElDeleteBtn(){ $("btnElDelete").disabled = !$("elVoice").value; }
@@ -2780,7 +2886,7 @@ function init(){
   $("btnConfirmYes").addEventListener("click", ()=>{ settleConfirm(true); closeSheets(); });
   $("btnConfirmNo").addEventListener("click", ()=>{ closeSheets(); });
   $("btnElVoices").addEventListener("click", loadElVoices);
-  $("elVoice").addEventListener("change", ()=>{ syncElDeleteBtn(); syncSelectButton("elVoice"); });
+  $("elVoice").addEventListener("change", ()=>{ syncElDeleteBtn(); syncSelectButton("elVoice"); saveElSelected(); });
   $("btnElDelete").addEventListener("click", deleteElVoice);
   $("btnElCloneAdd").addEventListener("click", addElVoice);
   $("elCloneToggle").addEventListener("click", ()=>{
@@ -2926,12 +3032,12 @@ function init(){
       session = sess;
       if (sess) sessionDeadHandled = false;
       renderAuth();
-      if (sess){ await loadKeys(); await loadControls(); await loadVoxStatus(); loadUsage(); }
-      else { resetKeys(); const uc = $("usageCard"); if (uc) uc.classList.add("hidden"); voxStatus = { enabled:false, available:false, loaded:false }; renderVoxStatus(); refreshProLocks(); }
+      if (sess){ await loadKeys(); initElVoices(); await loadControls(); await loadVoxStatus(); loadUsage(); }
+      else { resetKeys(); elVoicesScopeDone = ""; const uc = $("usageCard"); if (uc) uc.classList.add("hidden"); voxStatus = { enabled:false, available:false, loaded:false }; renderVoxStatus(); refreshProLocks(); }
     });
     sb.auth.getSession().then(async ({data})=>{
       session = data.session; renderAuth();
-      if (session){ await loadKeys(); await loadControls(); await loadVoxStatus(); loadUsage(); }
+      if (session){ await loadKeys(); initElVoices(); await loadControls(); await loadVoxStatus(); loadUsage(); }
     });
   }
   renderVoxStatus();
