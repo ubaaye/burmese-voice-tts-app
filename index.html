@@ -99,12 +99,37 @@
   .chipRow{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px;}
   .chip{padding:5px 11px;font-size:12.5px;border-radius:20px;line-height:1.4;}
   .chip.active{border-color:var(--accent);background:rgba(77,163,255,.22);color:#fff;}
-  /* Indeterminate loading bar (shown while generating) */
-  .loadBar{position:sticky;top:4px;z-index:70;height:3px;border-radius:3px;overflow:hidden;
-    background:rgba(255,255,255,.08);margin:0 2px 4px;}
-  .loadBar .fill{position:absolute;top:0;left:0;height:100%;width:40%;border-radius:3px;
-    background:linear-gradient(90deg,var(--accent),var(--accent2));animation:loadSlide 1.1s ease-in-out infinite;}
-  @keyframes loadSlide{0%{left:-40%}100%{left:100%}}
+  /* Waveform loading indicator (sound-wave bars, shown while generating) */
+  .waveBar{position:sticky;top:4px;z-index:70;display:flex;gap:3px;justify-content:center;align-items:center;
+    height:30px;margin:0 2px 4px;padding:3px 0;}
+  .waveBar span{width:4px;height:8px;border-radius:2px;flex:0 0 auto;
+    background:linear-gradient(180deg,var(--accent),var(--accent2));
+    animation:waveEq 1.05s ease-in-out infinite;}
+  @keyframes waveEq{0%,100%{height:6px}50%{height:24px}}
+  /* Select-replacement picker button (opens a bottom sheet) */
+  .pickBtn{width:100%;background:rgba(0,0,0,.28);border:1px solid var(--glass-border);border-radius:10px;
+    color:var(--txt);padding:10px;font-size:14.5px;display:flex;align-items:center;gap:8px;text-align:left;}
+  .pickBtn .pickLabel{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pickBtn .pickSub{display:block;font-size:11.5px;color:var(--muted);font-weight:400;}
+  .pickCaret{color:var(--muted);flex:0 0 auto;}
+  .pickBtn .badgePro,.pickBtn .badgeFree,.pickBtn .badgeBeta{position:static;flex:0 0 auto;}
+  /* Bottom-sheet pop-ups (pickers + settings) */
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:81;max-width:560px;margin:0 auto;
+    background:rgba(17,23,42,.98);border:1px solid var(--glass-border);border-bottom:none;
+    border-radius:18px 18px 0 0;padding:14px 14px calc(16px + env(safe-area-inset-bottom));
+    box-shadow:0 -12px 32px rgba(0,0,0,.5);max-height:84dvh;display:flex;flex-direction:column;
+    transform:translateY(110%);visibility:hidden;transition:transform .28s ease, visibility 0s linear .28s;}
+  .sheet.open{transform:translateY(0);visibility:visible;transition:transform .28s ease;}
+  .sheetHead{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:16px;margin-bottom:10px;}
+  .sheetBody{overflow-y:auto;}
+  .sheetOpt{width:100%;text-align:left;display:flex;align-items:center;gap:8px;padding:11px 10px;margin-bottom:6px;line-height:1.35;}
+  .sheetOpt .oMain{flex:1;}
+  .sheetOpt .oSub{display:block;font-size:11.5px;color:var(--muted);}
+  .sheetOpt.sel{border-color:var(--accent);background:rgba(77,163,255,.16);}
+  .sheetOpt .badgePro,.sheetOpt .badgeFree,.sheetOpt .badgeBeta{position:static;flex:0 0 auto;}
+  .sheetCheck{color:var(--accent);font-weight:700;flex:0 0 auto;}
+  .menuBtn{width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;
+    padding:12px 10px;margin-bottom:8px;font-size:14.5px;}
   a{color:var(--accent);}
   /* Left slide menu (drawer) */
   .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:59;}
@@ -129,7 +154,7 @@
     <h1>Burmese Voice TTS</h1>
     <span class="sub">PUBLIC</span>
   </header>
-  <div id="loadBar" class="loadBar hidden"><div class="fill"></div></div>
+  <div id="loadBar" class="waveBar hidden" aria-hidden="true"><span style="animation-delay:-.95s"></span><span style="animation-delay:-.42s;animation-duration:1.2s"></span><span style="animation-delay:-.78s"></span><span style="animation-delay:-.15s;animation-duration:.9s"></span><span style="animation-delay:-.63s"></span><span style="animation-delay:-.30s;animation-duration:1.15s"></span><span style="animation-delay:-.88s"></span><span style="animation-delay:-.05s;animation-duration:.95s"></span><span style="animation-delay:-.55s"></span><span style="animation-delay:-.72s;animation-duration:1.25s"></span><span style="animation-delay:-.20s"></span><span style="animation-delay:-.48s;animation-duration:.9s"></span><span style="animation-delay:-.98s"></span><span style="animation-delay:-.35s;animation-duration:1.1s"></span><span style="animation-delay:-.68s"></span><span style="animation-delay:-.10s;animation-duration:.85s"></span><span style="animation-delay:-.82s"></span><span style="animation-delay:-.52s;animation-duration:1.2s"></span><span style="animation-delay:-.25s"></span><span style="animation-delay:-.60s;animation-duration:.95s"></span><span style="animation-delay:-.90s"></span><span style="animation-delay:-.40s;animation-duration:1.15s"></span><span style="animation-delay:-.75s"></span><span style="animation-delay:-.18s;animation-duration:.9s"></span></div>
 
   <div id="configWarn" class="warn hidden">⚠️ Supabase ချိတ်ဆက်မှု မပြင်ရသေးပါ — deploy လုပ်ချိန်တွင် ပြင်ပါမည်။ (နည်းပညာ အဖွဲ့ အတွက်: SUPABASE_URL / SUPABASE_ANON_KEY)</div>
 
@@ -145,7 +170,7 @@
     <input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••">
     <div class="row" style="margin-top:14px;">
       <button id="btnSignIn" class="primary">ဝင်မယ်</button>
-      <button id="btnSignUp">အကောင့်အသစ် ဖွင့်မယ်</button>
+      <button id="btnSignUp">အကောင့်သစ် ဖွင့်မယ်</button>
     </div>
     <div id="authMsg" class="msg info"></div>
   </section>
@@ -154,8 +179,16 @@
   <div id="appArea" class="hidden">
 
     <div class="card">
-      <!-- Mode switcher -->
-      <div class="modeTabs">
+      <!-- Mode switcher: one selector button -> bottom-sheet pop-up.
+           The .modeTabs cards stay in the DOM (hidden) as the sheet's data
+           source and for refreshProLocks' badge updates. -->
+      <label style="margin-top:0;">TTS အင်ဂျင်</label>
+      <button id="modeBtn" class="pickBtn" type="button" style="margin-bottom:10px;">
+        <span class="pickLabel"><span id="modeBtnName">Edge TTS</span><span class="pickSub" id="modeBtnSub"></span></span>
+        <span id="modeBtnBadge"></span>
+        <span class="pickCaret">▾</span>
+      </button>
+      <div class="modeTabs hidden">
         <button class="modeTab active" data-mode="edge">
           <span class="t">Edge TTS</span><span class="d">သီဟ / နီလာ — မြန်မာ အသံ</span>
           <span class="badgeFree">FREE</span>
@@ -185,7 +218,8 @@
         <div style="margin-top:6px;"><button type="button" class="small" data-fix="edgeText">✨ စာပြင်</button></div>
         <div class="counter" id="edgeCounter"></div>
         <label>အသံ</label>
-        <select id="edgeVoice">
+        <button id="edgeVoiceBtn" class="pickBtn" type="button"><span class="pickLabel" id="edgeVoiceBtnLabel"></span><span class="pickCaret">▾</span></button>
+        <select id="edgeVoice" class="hidden">
           <option value="my-MM-ThihaNeural">သီဟ (အမျိုးသား)</option>
           <option value="my-MM-NilarNeural">နီလာ (အမျိုးသမီး)</option>
         </select>
@@ -210,13 +244,14 @@
         <div class="counter" id="elCounter"></div>
         <label>အသံ (Voice)</label>
         <div class="row">
-          <select id="elVoice" style="flex:2;"></select>
-          <button id="btnElVoices" type="button">အသံ စာရင်း ယူမယ်</button>
+          <button id="elVoiceBtn" class="pickBtn" type="button" style="flex:2;"><span class="pickLabel" id="elVoiceBtnLabel"></span><span class="pickCaret">▾</span></button>
+          <button id="btnElVoices" type="button">🔄 အသံ ယူမယ်</button>
           <button id="btnElDelete" type="button" title="ရွေးထားတဲ့ အသံ ဖျက်မယ်" disabled>🗑️</button>
         </div>
+        <select id="elVoice" class="hidden"></select>
         <div class="muted hidden" id="elNoVoices">«NLO» clone အသံ မတွေ့ပါ — အောက်က «အသံ အသစ် ထည့်» မှာ «NLO» နာမည်နဲ့ အရင် ထည့်ပါ။</div>
         <button class="profileHead" id="elCloneToggle" type="button" style="margin-top:12px;">
-          <span>➕ အသံ အသစ် ထည့် (Clone)</span><span id="elCloneChevron">▸</span>
+          <span>➕ အသံ အသစ် ထည့်</span><span id="elCloneChevron">▸</span>
         </button>
         <div id="elCloneBody" class="hidden">
           <label>အသံ နာမည်</label>
@@ -236,7 +271,8 @@
         <div style="margin-top:6px;"><button type="button" class="small" data-fix="gemText">✨ စာပြင်</button></div>
         <div class="counter" id="gemCounter"></div>
         <label>အသံ (Studio voice)</label>
-        <select id="gemVoice"></select>
+        <button id="gemVoiceBtn" class="pickBtn" type="button"><span class="pickLabel" id="gemVoiceBtnLabel"></span><span class="pickCaret">▾</span></button>
+        <select id="gemVoice" class="hidden"></select>
         <label>ပြောဟန် (Style) — မဖြစ်မနေ မလိုပါ</label>
         <div class="chipRow" id="gemStyleChips"></div>
         <input type="text" id="gemStyle" placeholder="ဥပမာ: Say cheerfully / ပျော်ပျော်ရွှင်ရွှင် ပြောပါ">
@@ -245,11 +281,13 @@
         <div id="gemDuoBox" class="hidden">
           <div class="row">
             <input type="text" id="spk1Name" placeholder="နာမည် ၁ (ဥပမာ Aung)">
-            <select id="spk1Voice"></select>
+            <button id="spk1VoiceBtn" class="pickBtn" type="button"><span class="pickLabel" id="spk1VoiceBtnLabel"></span><span class="pickCaret">▾</span></button>
+            <select id="spk1Voice" class="hidden"></select>
           </div>
           <div class="row" style="margin-top:6px;">
             <input type="text" id="spk2Name" placeholder="နာမည် ၂ (ဥပမာ May)">
-            <select id="spk2Voice"></select>
+            <button id="spk2VoiceBtn" class="pickBtn" type="button"><span class="pickLabel" id="spk2VoiceBtnLabel"></span><span class="pickCaret">▾</span></button>
+            <select id="spk2Voice" class="hidden"></select>
           </div>
           <div class="muted">စာသားကို <b>Aung: ...</b> / <b>May: ...</b> ဆိုပြီး တစ်ကြောင်းစီ ရေးပါ။ (တစ်ယောက်တည်း အသံ ဆိုရင် ဒီ အဆင့်ကို ကျော်လို့ ရပါတယ်။)</div>
         </div>
@@ -287,13 +325,6 @@
         <div class="proLock hidden" data-prolock></div>
       </div>
 
-      <!-- Shared volume -->
-      <div class="volRow">
-        <span style="font-size:13px;">🔊 အသံအတိုး</span>
-        <input type="range" id="volSlider" min="50" max="200" step="5" value="100">
-        <span class="sliderVal" id="volVal">100%</span>
-      </div>
-
       <button id="btnGenerate" class="primary big">🔊 အသံ ထုတ်မယ်</button>
       <div id="statusMsg" class="msg info"></div>
       <div id="wakeBox" class="proLock hidden">
@@ -303,7 +334,7 @@
 
       <div id="resultBox" class="hidden">
         <audio id="player" controls></audio>
-        <a id="dlLink" class="dlBtn" href="#" download>⬇️ အသံဖိုင် ဒေါင်းလုပ်ဆွဲမယ်</a>
+        <a id="dlLink" class="dlBtn" href="#" download>⬇️ ဒေါင်းလုပ်ဆွဲ</a>
       </div>
     </div>
 
@@ -317,7 +348,7 @@
 <aside id="drawer" class="drawer" aria-hidden="true">
   <div class="drawerHead">
     <span>☰ Menu</span>
-    <button id="btnDrawerClose" class="small" type="button">✕ ပိတ်မယ်</button>
+    <button id="btnDrawerClose" class="small" type="button">✕</button>
   </div>
 
   <!-- PROFILE — signed-in email + sign-out -->
@@ -329,13 +360,20 @@
     <button id="btnSignOut" class="small">ထွက်မယ်</button>
   </div>
 
-  <!-- USER SETTINGS — My Profile key block (moved from main flow) -->
-  <!-- ============ MY PROFILE ============ -->
+  <!-- MENU ENTRIES — settings/features open as pop-up sheets -->
   <div class="card">
-    <button class="profileHead" id="profileToggle" type="button">
-      <span>👤 My Profile — API Key များ</span><span id="profileChevron">▸</span>
-    </button>
-    <div id="profileBody" class="hidden">
+    <button id="btnOpenKeys" class="menuBtn" type="button"><span>🔑 My Keys &amp; Pro Code</span><span>›</span></button>
+    <button id="btnOpenSettings" class="menuBtn" type="button" style="margin-bottom:0;"><span>⚙️ Settings</span><span>›</span></button>
+  </div>
+</aside>
+
+<!-- ============ POP-UP SHEETS ============ -->
+<div id="sheetBackdrop" class="backdrop hidden" style="z-index:80;"></div>
+
+<!-- MY KEYS + PRO CODE sheet (the old drawer My Profile block, moved as-is) -->
+<div id="sheetKeys" class="sheet" aria-hidden="true">
+  <div class="sheetHead"><span>🔑 My Keys &amp; Pro Code</span><button class="small" type="button" data-close-sheet>✕</button></div>
+  <div class="sheetBody">
       <div class="notice">
         🔑 Key တွေကို <b>သင့် အကောင့်ထဲမှာပဲ</b> သိမ်းထားပြီး သင့် တောင်းဆိုမှုတွေ အတွက်ပဲ သုံးပါတယ်။
         သူများ မမြင်နိုင်ပါ။ ဒီ app အတွက် <b>သီးသန့် ထုတ်ထားတဲ့ key</b> ကိုပဲ ထည့်သုံးဖို့ အကြံပြုပါတယ် —
@@ -372,9 +410,29 @@
       <button id="btnSaveKeys" class="primary" style="width:100%;margin-top:14px;">💾 သိမ်းမယ်</button>
       <div id="profileMsg" class="msg info"></div>
       <div id="keysStatus" class="msg ok hidden"></div>
+  </div>
+</div>
+
+<!-- SETTINGS sheet -->
+<div id="sheetSettings" class="sheet" aria-hidden="true">
+  <div class="sheetHead"><span>⚙️ Settings</span><button class="small" type="button" data-close-sheet>✕</button></div>
+  <div class="sheetBody">
+    <label style="margin-top:0;">🔊 အသံအတိုး (Volume)</label>
+    <div class="sliderRow">
+      <input type="range" id="volSlider" min="50" max="200" step="5" value="100">
+      <span class="sliderVal" id="volVal">100%</span>
     </div>
   </div>
-</aside>
+</div>
+
+<!-- GENERIC PICKER sheet (engine / voice selection) -->
+<div id="sheet" class="sheet" aria-hidden="true">
+  <div class="sheetHead"><span id="sheetTitle"></span><button id="sheetClose" class="small" type="button">✕</button></div>
+  <div id="sheetSearchWrap" class="hidden" style="margin-bottom:8px;">
+    <input type="text" id="sheetSearch" placeholder="🔍 ရှာရန်..." autocomplete="off">
+  </div>
+  <div id="sheetBody" class="sheetBody"></div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -432,7 +490,7 @@ const GEM_STYLE_PRESETS = [
 function setMsg(id, text, cls){ const el=$(id); el.textContent=text||""; el.className="msg "+(cls||"info"); }
 function busy(on, label){
   const b=$("btnGenerate"); b.disabled=on;
-  b.innerHTML = on ? '<span class="spin"></span>'+(label||"ထုတ်နေပါတယ်...") : "🔊 အသံ ထုတ်မယ်";
+  b.textContent = on ? (label||"ထုတ်နေပါတယ်...") : "🔊 အသံ ထုတ်မယ်";
   $("loadBar").classList.toggle("hidden", !on);
   if (on) setMsg("statusMsg", label || "⏳ အသံ ထုတ်နေပါတယ် — ခဏ စောင့်ပါ…", "info");
 }
@@ -720,7 +778,7 @@ function refreshProLocks(){
     if (!["el","gemini","f5"].includes(mode)){ el.classList.add("hidden"); return; }
     if (!proUnlocked(mode)){
       el.innerHTML = PRO_LOCKED_TEXT +
-        '<br><button type="button" class="small" data-open-key-drawer style="margin-top:8px;">🔑 Key ထည့်ရန် — Menu ဖွင့်ပါ</button>';
+        '<br><button type="button" class="small" data-open-key-drawer style="margin-top:8px;">🔑 Key ထည့်ရန်</button>';
       el.classList.remove("hidden");
       return;
     }
@@ -733,6 +791,7 @@ function refreshProLocks(){
   const voxBlocked = currentMode === "vox" && !(voxStatus.enabled && voxStatus.available);
   $("btnGenerate").disabled = disabledModes.includes(currentMode) ||
     (proMode && !proUnlocked(currentMode)) || voxBlocked;
+  syncModeBtn();
 }
 
 /* ---------------- result ---------------- */
@@ -965,6 +1024,7 @@ async function loadElVoices(){
       if (id){ const o=document.createElement("option"); o.value=id; o.textContent=nlo.name || id; sel.appendChild(o); }
     }
     if (sel.options.length) sel.value = sel.options[0].value;
+    syncSelectButton("elVoice");
     $("elNoVoices").classList.toggle("hidden", sel.options.length > 0);
     setMsg("statusMsg", "✅ အသံ "+sel.options.length+" ခု ရပါပြီ။", "ok");
     syncElDeleteBtn();
@@ -999,6 +1059,7 @@ async function addElVoice(){
     await loadElVoices();
     /* Same "NLO"-only rule: select the new voice only if it is in the list. */
     if (newId && $("elVoice").querySelector('option[value="' + newId + '"]')) $("elVoice").value = newId;
+    syncSelectButton("elVoice");
     syncElDeleteBtn();
     $("elCloneName").value = ""; $("elCloneSample").value = "";
     setMsg("statusMsg", "✅ အသံ အသစ် «" + (d.name || name) + "» ထည့်ပြီးပါပြီ။", "ok");
@@ -1165,7 +1226,7 @@ function renderAuth(){
   $("loginCard").classList.toggle("hidden", logged);
   $("appArea").classList.toggle("hidden", !logged);
   $("btnMenu").classList.toggle("hidden", !logged);
-  if (!logged) closeDrawer();
+  if (!logged){ closeDrawer(); closeSheets(); }
   if (logged) $("userEmail").textContent = "👤 " + (session.user.email || "");
   $("ownerBadge").classList.toggle("hidden", !(logged && isOwner()));
 }
@@ -1181,14 +1242,144 @@ function closeDrawer(){
   $("drawerBackdrop").classList.add("hidden");
 }
 
+/* ---------------- bottom-sheet pop-ups ----------------
+   One shared backdrop + three sheet panels (generic picker, My Keys,
+   Settings). The visible <select> dropdowns are gone: each select stays
+   in the DOM hidden and synced, and a .pickBtn opens the picker sheet. */
+function openSheetEl(el){
+  if (!el) return;
+  closeDrawer();
+  document.querySelectorAll(".sheet").forEach(s=>{ s.classList.remove("open"); s.setAttribute("aria-hidden","true"); });
+  el.classList.add("open");
+  el.setAttribute("aria-hidden", "false");
+  $("sheetBackdrop").classList.remove("hidden");
+}
+function closeSheets(){
+  document.querySelectorAll(".sheet").forEach(s=>{ s.classList.remove("open"); s.setAttribute("aria-hidden","true"); });
+  $("sheetBackdrop").classList.add("hidden");
+}
+function openKeysSheet(){ openSheetEl($("sheetKeys")); }
+function openSettingsSheet(){ openSheetEl($("sheetSettings")); }
+
+/* Generic picker sheet: items = [{value,label,sub,badgeText,badgeClass,selected}].
+   opts.search adds a filter box (used by the 30-voice Gemini list). */
+let sheetPickHandler = null;
+function openPickerSheet(title, items, onPick, opts){
+  opts = opts || {};
+  $("sheetTitle").textContent = title;
+  sheetPickHandler = onPick;
+  const body = $("sheetBody");
+  const render = (filter)=>{
+    body.innerHTML = "";
+    const q = (filter || "").trim().toLowerCase();
+    let shown = 0;
+    items.forEach(it=>{
+      if (q && !(it.label || "").toLowerCase().includes(q)) return;
+      shown++;
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "sheetOpt" + (it.selected ? " sel" : "");
+      const main = document.createElement("span");
+      main.className = "oMain";
+      main.textContent = it.label;
+      if (it.sub){
+        const s = document.createElement("span");
+        s.className = "oSub"; s.textContent = it.sub;
+        main.appendChild(s);
+      }
+      b.appendChild(main);
+      if (it.badgeText){
+        const bd = document.createElement("span");
+        bd.className = it.badgeClass || ""; bd.textContent = it.badgeText;
+        b.appendChild(bd);
+      }
+      if (it.selected){
+        const ck = document.createElement("span");
+        ck.className = "sheetCheck"; ck.textContent = "✓";
+        b.appendChild(ck);
+      }
+      b.addEventListener("click", ()=>{ closeSheets(); if (sheetPickHandler) sheetPickHandler(it.value); });
+      body.appendChild(b);
+    });
+    if (!shown){
+      const d = document.createElement("div");
+      d.className = "muted"; d.textContent = "မတွေ့ပါ။";
+      body.appendChild(d);
+    }
+  };
+  const wrap = $("sheetSearchWrap"), input = $("sheetSearch");
+  wrap.classList.toggle("hidden", !opts.search);
+  input.value = "";
+  input.oninput = ()=> render(input.value);
+  render("");
+  openSheetEl($("sheet"));
+  if (opts.search) setTimeout(()=>{ try{ input.focus(); }catch(e){} }, 280);
+}
+/* Voice/engine pickers are driven by the (hidden) selects: the sheet lists
+   the select's current options; picking sets the value + fires "change". */
+function syncSelectButton(selId){
+  const sel = $(selId), lbl = $(selId + "BtnLabel");
+  if (!sel || !lbl) return;
+  const opt = sel.options[sel.selectedIndex];
+  lbl.textContent = opt ? opt.textContent : "ရွေးပါ";
+}
+function openSelectSheet(selId, title, searchable){
+  const sel = $(selId); if (!sel) return;
+  const items = Array.from(sel.options).map(o=>({ value:o.value, label:o.textContent, selected:o.value === sel.value }));
+  if (!items.length){
+    openPickerSheet(title, [], ()=>{}, {});
+    $("sheetBody").innerHTML = '<div class="muted">စာရင်း မရှိသေးပါ — အရင် ယူပါ။</div>';
+    return;
+  }
+  openPickerSheet(title, items, (value)=>{
+    sel.value = value;
+    sel.dispatchEvent(new Event("change", { bubbles:true }));
+    syncSelectButton(selId);
+  }, { search: !!searchable });
+}
+/* Engine selector button mirrors the active (hidden) .modeTab card. */
+const MODE_ICONS = { edge:"🔊", el:"🎙️", gemini:"✨", f5:"🧬", vox:"🤖" };
+function syncModeBtn(){
+  const nameEl = $("modeBtnName"), subEl = $("modeBtnSub"), badgeEl = $("modeBtnBadge");
+  if (!nameEl || !badgeEl) return;
+  const tab = document.querySelector('.modeTab[data-mode="' + currentMode + '"]');
+  if (!tab) return;
+  const t = tab.querySelector(".t"), d = tab.querySelector(".d");
+  nameEl.textContent = (MODE_ICONS[currentMode] || "") + " " + (t ? t.textContent : currentMode);
+  if (subEl) subEl.textContent = d ? d.textContent : "";
+  const badge = tab.querySelector(".badgePro,.badgeFree,.badgeBeta");
+  if (badge){ badgeEl.className = badge.className; badgeEl.textContent = badge.textContent; }
+  else { badgeEl.className = ""; badgeEl.textContent = ""; }
+}
+function openEngineSheet(){
+  const items = Array.from(document.querySelectorAll(".modeTab")).map(tab=>{
+    const badge = tab.querySelector(".badgePro,.badgeFree,.badgeBeta");
+    return {
+      value: tab.dataset.mode,
+      label: (MODE_ICONS[tab.dataset.mode] || "") + " " + (tab.querySelector(".t") ? tab.querySelector(".t").textContent : tab.dataset.mode),
+      sub: tab.querySelector(".d") ? tab.querySelector(".d").textContent : "",
+      badgeText: badge ? badge.textContent : "",
+      badgeClass: badge ? badge.className : "",
+      selected: tab.dataset.mode === currentMode
+    };
+  });
+  openPickerSheet("TTS အင်ဂျင် ရွေးပါ", items, (mode)=>{
+    const tab = document.querySelector('.modeTab[data-mode="' + mode + '"]');
+    if (tab) tab.click();
+    syncModeBtn();
+  }, {});
+}
+
 /* ---------------- wiring ---------------- */
 function fillGeminiVoices(){
   ["gemVoice","spk1Voice","spk2Voice"].forEach(id=>{
     const sel=$(id); sel.innerHTML="";
     GEMINI_VOICES.forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=v; sel.appendChild(o); });
     sel.value = "Kore";
+    syncSelectButton(id);
   });
   $("spk2Voice").value = "Puck";
+  syncSelectButton("spk2Voice");
 }
 function init(){
   fillGeminiVoices();
@@ -1229,7 +1420,7 @@ function init(){
   $("btnGenerate").addEventListener("click", generate);
   $("btnRetry").addEventListener("click", ()=>{ showWake(false); generate(); });
   $("btnElVoices").addEventListener("click", loadElVoices);
-  $("elVoice").addEventListener("change", syncElDeleteBtn);
+  $("elVoice").addEventListener("change", ()=>{ syncElDeleteBtn(); syncSelectButton("elVoice"); });
   $("btnElDelete").addEventListener("click", deleteElVoice);
   $("btnElCloneAdd").addEventListener("click", addElVoice);
   $("elCloneToggle").addEventListener("click", ()=>{
@@ -1246,7 +1437,7 @@ function init(){
     });
   });
   document.querySelectorAll("[data-prolock]").forEach(el=>{
-    el.addEventListener("click", e=>{ if (e.target.closest("[data-open-key-drawer]")) openDrawer(); });
+    el.addEventListener("click", e=>{ if (e.target.closest("[data-open-key-drawer]")) openKeysSheet(); });
   });
   $("btnSignIn").addEventListener("click", signIn);
   $("btnSignUp").addEventListener("click", signUp);
@@ -1254,10 +1445,23 @@ function init(){
   $("btnMenu").addEventListener("click", openDrawer);
   $("btnDrawerClose").addEventListener("click", closeDrawer);
   $("drawerBackdrop").addEventListener("click", closeDrawer);
-  $("profileToggle").addEventListener("click", ()=>{
-    const body=$("profileBody"), open=body.classList.toggle("hidden")===false;
-    $("profileChevron").textContent = open ? "▾" : "▸";
+  $("btnOpenKeys").addEventListener("click", openKeysSheet);
+  $("btnOpenSettings").addEventListener("click", openSettingsSheet);
+  $("sheetClose").addEventListener("click", closeSheets);
+  $("sheetBackdrop").addEventListener("click", closeSheets);
+  document.querySelectorAll("[data-close-sheet]").forEach(b=> b.addEventListener("click", closeSheets));
+  $("modeBtn").addEventListener("click", openEngineSheet);
+  $("edgeVoiceBtn").addEventListener("click", ()=> openSelectSheet("edgeVoice", "အသံ ရွေးပါ", false));
+  $("elVoiceBtn").addEventListener("click", ()=> openSelectSheet("elVoice", "အသံ (Voice) ရွေးပါ", false));
+  $("gemVoiceBtn").addEventListener("click", ()=> openSelectSheet("gemVoice", "အသံ (Studio voice) ရွေးပါ", true));
+  $("spk1VoiceBtn").addEventListener("click", ()=> openSelectSheet("spk1Voice", "ပြောသူ ၁ — အသံ ရွေးပါ", true));
+  $("spk2VoiceBtn").addEventListener("click", ()=> openSelectSheet("spk2Voice", "ပြောသူ ၂ — အသံ ရွေးပါ", true));
+  ["edgeVoice","gemVoice","spk1Voice","spk2Voice"].forEach(id=>{
+    $(id).addEventListener("change", ()=> syncSelectButton(id));
+    syncSelectButton(id);
   });
+  syncSelectButton("elVoice");
+  syncModeBtn();
   $("btnSaveKeys").addEventListener("click", saveKeys);
   document.querySelectorAll("[data-eye]").forEach(b=>{
     b.addEventListener("click", ()=>{
