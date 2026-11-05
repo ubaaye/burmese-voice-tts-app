@@ -514,6 +514,10 @@
         <div class="fixRow"><button type="button" class="small primary" data-fixopen="elText">✨ စာပြင်</button><button type="button" class="small" data-fix="elText">⚡ တန်း ပြင်</button><button type="button" class="small" data-clear="elText">🗑 ဖျက်</button></div>
         <div class="fixChip hidden" id="fixChip-elText"></div>
         <div class="counter" id="elCounter"></div>
+        <label>ပြောဟန် (Style)</label>
+        <div class="chipRow" id="elStyleChips"></div>
+        <label style="margin-top:4px;"><input type="checkbox" id="elPerLine" style="width:auto;"> တစ်ကြောင်းချင်း ထည့်မယ်</label>
+        <div class="muted" style="margin-top:4px;">Chip နှိပ်ရင် စာသား အစ (သို့) တစ်ကြောင်းချင်း ဖွင့်ထားရင် cursor ရှိတဲ့ ကြောင်းမှာ [tag] ဝင်မယ်။ ElevenLabs က tag ကို မဖတ်ဘဲ ပြောဟန်ပဲ ပြောင်းတယ်။</div>
         <label>အသံ (Voice)</label>
         <div class="row">
           <button id="elVoiceBtn" class="pickBtn" type="button" style="flex:2;"><span class="pickLabel" id="elVoiceBtnLabel"></span><span class="pickCaret">▾</span></button>
@@ -882,6 +886,28 @@ const GEM_STYLE_TAGS = {
 /* A user tag at a line's start — same rule as the server's
    _USER_TAG_LINE_RE: brackets of letters/spaces/hyphens only. */
 const USER_TAG_LINE_RE = /^\s*\[([A-Za-z][A-Za-z \-]{0,40})\]/;
+/* Shared line-tag edit core: at absolute index `anchor` in textarea
+   `ta`, replace the leading user tag there (or insert one); an empty
+   tag removes it. Fires "input", refocuses, leaves the cursor right
+   after the inserted tag, and returns that cursor position. Used by
+   Gemini's per-line mode (anchor = the line start, or just after a
+   dialogue "Name:" prefix) and by the ElevenLabs style chips. */
+function editLineTag(ta, anchor, tag){
+  const val = ta.value;
+  const prefix = tag ? "[" + tag + "] " : "";
+  const m = USER_TAG_LINE_RE.exec(val.slice(anchor));
+  let cut = anchor;
+  if (m){
+    cut = anchor + m[0].length;
+    if (val[cut] === " ") cut += 1;   /* also drop the separator space we add */
+  }
+  ta.value = val.slice(0, anchor) + prefix + val.slice(cut);
+  ta.dispatchEvent(new Event("input", { bubbles:true }));
+  ta.focus();
+  const cur = anchor + prefix.length;
+  ta.setSelectionRange(cur, cur);
+  return cur;
+}
 /* Per-line mode chip tap: tag the line holding the text cursor in
    #gemText (replace its leading tag, or insert one). Empty tag =
    remove the line's tag. The global #gemStyle field is NOT touched. */
@@ -920,17 +946,54 @@ function applyPerLineStyle(tag){
       if (pm) anchor = lineStart + pm[0].length;
     }
   }
-  const m = USER_TAG_LINE_RE.exec(val.slice(anchor));
-  let cut = anchor;
-  if (m){
-    cut = anchor + m[0].length;
-    if (val[cut] === " ") cut += 1;   /* also drop the separator space we add */
+  editLineTag(ta, anchor, tag);
+}
+
+/* ---------------- ElevenLabs style chips ----------------
+   The same tone chips as Gemini's, writing inline [tag]s into #elText
+   (the EL routes send the text to ElevenLabs verbatim, and eleven_v4
+   honours the tags as delivery markup — user-verified by ear
+   2026-11-05: [bored] vs [angry] vs untagged renditions of the same
+   Burmese line differed, tags never spoken). Toggle OFF: a chip sets
+   the leading tag of the WHOLE text; toggle ON (per-line): it tags
+   the line holding the cursor, like Gemini's per-line mode but with
+   no dialogue anchoring (EL has no dialogue mode). */
+/* Last known cursor position in #elText, tracked in init() off its
+   focus/click/keyup/select/input events — same reason as _gemCursor:
+   by the time a chip's click handler runs, focus has already moved
+   to the chip button, so the live selection is not always the one
+   the user left in the text. */
+let _elCursor = null;
+function applyElStyleTag(tag){
+  const ta = $("elText"); if (!ta) return;
+  const perLine = $("elPerLine");
+  if (!(perLine && perLine.checked)){
+    /* Whole text: set/replace the leading tag of the first line. */
+    _elCursor = editLineTag(ta, 0, tag);
+    return;
   }
-  ta.value = val.slice(0, anchor) + prefix + val.slice(cut);
-  ta.dispatchEvent(new Event("input", { bubbles:true }));
-  ta.focus();
-  const cur = anchor + prefix.length;
-  ta.setSelectionRange(cur, cur);
+  const val = ta.value;
+  let pos = 0;   /* never interacted -> first line */
+  if (document.activeElement === ta && typeof ta.selectionStart === "number" && ta.selectionStart !== null)
+    pos = ta.selectionStart;
+  else if (_elCursor !== null)
+    pos = _elCursor;
+  pos = Math.max(0, Math.min(pos, val.length));
+  const lineStart = val.lastIndexOf("\n", pos - 1) + 1;
+  _elCursor = editLineTag(ta, lineStart, tag);
+}
+/* Build the ElevenLabs style chips (same presets + tag map as
+   Gemini's): click -> inline [tag] into #elText via applyElStyleTag.
+   EL has no global style field, so there is no active-chip state. */
+function initElStyleChips(){
+  const row = $("elStyleChips");
+  if (!row) return;
+  GEM_STYLE_PRESETS.forEach(([label, value])=>{
+    const c = document.createElement("button");
+    c.type = "button"; c.className = "chip"; c.textContent = label;
+    c.addEventListener("click", ()=> applyElStyleTag(GEM_STYLE_TAGS[value] || ""));
+    row.appendChild(c);
+  });
 }
 
 /* ---------------- Dialogue speaker name chips ----------------
@@ -1825,10 +1888,14 @@ function resetPane(mode){
     setRange("edgePitch", "0");                 /* markup value="0" */
   } else if (mode === "el"){
     /* The select only ever holds the NLO clone (loadElVoices rule), so
-       reset re-selects that option; speed returns to 1.0×. */
+       reset re-selects that option; speed returns to 1.0×. The per-line
+       style toggle goes off; tags in the text itself stay (Reset never
+       rewrites text content). */
     const sel = $("elVoice");
     if (sel && sel.options.length) setSel("elVoice", sel.options[0].value);
     setRange("elSpeed", "1");
+    const elPerLine = $("elPerLine");
+    if (elPerLine) elPerLine.checked = false;
   } else if (mode === "gemini"){
     /* Defaults from fillGeminiVoices(); the style text field stays
        untouched. Speaker names ARE cleared (fields + saved values),
@@ -3049,6 +3116,7 @@ function init(){
   attachUploadPreview("elCloneSample", "elCloneSamplePreview");
   fillGeminiVoices();
   initGemStyleChips();
+  initElStyleChips();
   bindCounter("edgeText","edgeCounter",0);
   bindCounter("elText","elCounter",0);
   bindCounter("gemText","gemCounter",0);
@@ -3094,6 +3162,13 @@ function init(){
     $("gemText").addEventListener(ev, ()=>{
       const t = $("gemText");
       if (typeof t.selectionStart === "number") _gemCursor = t.selectionStart;
+    }));
+  /* EL style chips: track the #elText cursor the same way, so a chip
+     tap (which moves focus to the chip) still tags the user's line. */
+  ["focus","click","keyup","select","input"].forEach(ev=>
+    $("elText").addEventListener(ev, ()=>{
+      const t = $("elText");
+      if (typeof t.selectionStart === "number") _elCursor = t.selectionStart;
     }));
   $("btnGenerate").addEventListener("click", generate);
   $("btnRetry").addEventListener("click", ()=>{ showWake(false); generate(); });
