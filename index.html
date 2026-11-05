@@ -247,6 +247,7 @@
           <input type="range" id="edgePitch" min="-50" max="50" step="5" value="0">
           <span class="sliderVal" id="edgePitchVal">0 Hz</span>
         </div>
+        <div style="text-align:right;margin-top:10px;"><button type="button" class="small" data-reset-pane="edge">↺ Reset</button></div>
         <div class="proLock hidden" data-prolock></div>
       </div>
 
@@ -275,6 +276,7 @@
           <div class="muted">နမူနာ အသံဖိုင် — ၁ မိနစ် ဝန်းကျင်, ရှင်းလင်းတဲ့ အသံ က ပိုကောင်း</div>
           <button id="btnElCloneAdd" type="button" class="primary" style="width:100%;margin-top:10px;">ထည့်မယ်</button>
         </div>
+        <div style="text-align:right;margin-top:10px;"><button type="button" class="small" data-reset-pane="el">↺ Reset</button></div>
         <div class="proLock hidden" data-prolock></div>
       </div>
 
@@ -305,6 +307,7 @@
           </div>
           <div class="muted">စာသားကို <b>Aung: ...</b> / <b>May: ...</b> ဆိုပြီး တစ်ကြောင်းစီ ရေးပါ။ (တစ်ယောက်တည်း အသံ ဆိုရင် ဒီ အဆင့်ကို ကျော်လို့ ရပါတယ်။)</div>
         </div>
+        <div style="text-align:right;margin-top:10px;"><button type="button" class="small" data-reset-pane="gemini">↺ Reset</button></div>
         <div class="proLock hidden" data-prolock></div>
       </div>
 
@@ -322,6 +325,7 @@
           <input type="range" id="f5Speed" min="0.5" max="2" step="0.25" value="1">
           <span class="sliderVal" id="f5SpeedVal">1.0×</span>
         </div>
+        <div style="text-align:right;margin-top:10px;"><button type="button" class="small" data-reset-pane="f5">↺ Reset</button></div>
         <div class="proLock hidden" data-prolock></div>
       </div>
 
@@ -833,6 +837,35 @@ function resetVolume(){
   const vol = $("volSlider"); if (!vol) return;
   vol.value = "100";
   vol.dispatchEvent(new Event("input", { bubbles:true }));
+}
+/* ↺ Reset (pane level): restore ONE pane's adjustable controls to their
+   markup/init defaults — never text areas, never keys/codes, no confirm.
+   Values are set through the controls' own input/change events so labels
+   and internal state update exactly as if the user moved them. */
+function resetPane(mode){
+  const setRange = (id, val)=>{ const s = $(id); if (!s) return; s.value = val; s.dispatchEvent(new Event("input", { bubbles:true })); };
+  const setSel = (id, val)=>{ const s = $(id); if (!s) return; s.value = val; s.dispatchEvent(new Event("change", { bubbles:true })); };
+  if (mode === "edge"){
+    setSel("edgeVoice", "my-MM-ThihaNeural");   /* သီဟ — first/default option */
+    setRange("edgeRate", "100");                /* markup value="100" */
+    setRange("edgePitch", "0");                 /* markup value="0" */
+  } else if (mode === "el"){
+    /* No speed control in this pane; the select only ever holds the NLO
+       clone (loadElVoices rule), so reset re-selects that option. */
+    const sel = $("elVoice");
+    if (sel && sel.options.length) setSel("elVoice", sel.options[0].value);
+  } else if (mode === "gemini"){
+    /* Defaults from fillGeminiVoices(); style text + speaker names are
+       text fields and stay untouched. */
+    setSel("gemVoice", "Kore");
+    setSel("spk1Voice", "Kore");
+    setSel("spk2Voice", "Puck");
+    const duo = $("gemDuo");
+    if (duo && duo.checked){ duo.checked = false; duo.dispatchEvent(new Event("change", { bubbles:true })); }
+  } else if (mode === "f5"){
+    setRange("f5Speed", "1");                   /* markup value="1" */
+  }
+  setMsg("statusMsg", "↺ Reset ပြီးပါပြီ", "ok");
 }
 
 /* ---------------- Pro lock notices ---------------- */
@@ -1540,6 +1573,7 @@ function init(){
   $("btnSaveKeys").addEventListener("click", saveKeys);
   $("btnResetKeys").addEventListener("click", clearSavedKeys);
   $("btnResetVol").addEventListener("click", resetVolume);
+  document.querySelectorAll("[data-reset-pane]").forEach(b=> b.addEventListener("click", ()=> resetPane(b.dataset.resetPane)));
   /* Copy lockdown: no long-press/right-click menu outside form fields
      (pasting into inputs/textareas keeps working). */
   document.addEventListener("contextmenu", e=>{
