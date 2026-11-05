@@ -191,7 +191,6 @@
   .chipStrip::-webkit-scrollbar{display:none;}
   .chipStrip>*{flex:0 0 auto;}
   .chipStrip .chipRow{flex-wrap:nowrap;gap:8px;margin:0;}
-  .chipStrip #spkChips{padding-right:8px;border-right:1px solid rgba(255,255,255,.14);}
   /* Centered waveform loading pop-up (shown while generating) */
   .loadPop{position:fixed;inset:0;z-index:75;display:flex;align-items:center;justify-content:center;
     padding:20px;background:rgba(3,6,16,.58);}
@@ -493,6 +492,10 @@
         <div class="fixRow"><button type="button" class="small primary" data-fixopen="edgeText">✨ စာပြင်</button><button type="button" class="small" data-fix="edgeText">⚡ တန်း ပြင်</button><button type="button" class="small" data-clear="edgeText">🗑 ဖျက်</button></div>
         <div class="fixChip hidden" id="fixChip-edgeText"></div>
         <div class="counter" id="edgeCounter"></div>
+        <div class="chipStrip" id="edgeChipStrip">
+          <div class="chipRow" id="edgePresetChips"></div>
+        </div>
+        <div class="muted" style="margin-top:2px;">Edge မှာ ခံစားချက် tag မရပါ — အသံ အနိမ့်/အမြင့် နဲ့ အနှေး/အမြန် ပဲ ချိန်လို့ရတယ်။</div>
         <label>အသံ</label>
         <button id="edgeVoiceBtn" class="pickBtn" type="button"><span class="pickLabel" id="edgeVoiceBtnLabel"></span><span class="pickCaret">▾</span></button>
         <select id="edgeVoice" class="hidden">
@@ -520,10 +523,10 @@
         <textarea id="elText" placeholder="ElevenLabs clone အသံနဲ့ ပြောမယ့် စာသား...">မင်္ဂလာပါ။ ကျွန်တော့် အသံနဲ့ ပြောနေတာပါ။</textarea>
         <div class="fixRow"><button type="button" class="small primary" data-fixopen="elText">✨ စာပြင်</button><button type="button" class="small" data-fix="elText">⚡ တန်း ပြင်</button><button type="button" class="small" data-clear="elText">🗑 ဖျက်</button></div>
         <div class="fixChip hidden" id="fixChip-elText"></div>
+        <div class="counter" id="elCounter"></div>
         <div class="chipStrip" id="elChipStrip">
           <div class="chipRow" id="elStyleChips"></div>
         </div>
-        <div class="counter" id="elCounter"></div>
         <label>ပြောဟန် (Style)</label>
         <label style="margin-top:4px;"><input type="checkbox" id="elPerLine" style="width:auto;"> တစ်ကြောင်းချင်း ထည့်မယ်</label>
         <div class="muted" style="margin-top:4px;">Chip နှိပ်ရင် စာသား အစ (သို့) တစ်ကြောင်းချင်း ဖွင့်ထားရင် cursor ရှိတဲ့ ကြောင်းမှာ [tag] ဝင်မယ်။ ElevenLabs က tag ကို မဖတ်ဘဲ ပြောဟန်ပဲ ပြောင်းတယ်။</div>
@@ -562,14 +565,16 @@
         <textarea id="gemText" placeholder="Gemini အသံနဲ့ ပြောမယ့် စာသား...">မင်္ဂလာပါ ရှင်။ ဒီနေ့ အကြောင်းလေး ပြောပြချင်လို့ပါ။</textarea>
         <div class="fixRow"><button type="button" class="small primary" data-fixopen="gemText">✨ စာပြင်</button><button type="button" class="small" data-fix="gemText">⚡ တန်း ပြင်</button><button type="button" class="small" data-clear="gemText">🗑 ဖျက်</button></div>
         <div class="fixChip hidden" id="fixChip-gemText"></div>
-        <div class="chipStrip" id="gemChipStrip">
+        <div class="counter" id="gemCounter"></div>
+        <div class="chipStrip hidden" id="gemNameStrip">
           <div class="chipRow hidden" id="spkChips">
             <button type="button" class="chip" id="spkChip1"></button>
             <button type="button" class="chip" id="spkChip2"></button>
           </div>
+        </div>
+        <div class="chipStrip" id="gemToneStrip">
           <div class="chipRow" id="gemStyleChips"></div>
         </div>
-        <div class="counter" id="gemCounter"></div>
         <label>အသံ (Studio voice)</label>
         <button id="gemVoiceBtn" class="pickBtn" type="button"><span class="pickLabel" id="gemVoiceBtnLabel"></span><span class="pickCaret">▾</span></button>
         <select id="gemVoice" class="hidden"></select>
@@ -1007,6 +1012,73 @@ function initElStyleChips(){
   });
 }
 
+/* ---------------- Edge prosody preset chips ----------------
+   Edge's Burmese voices accept NO emotion tags, so the only "style"
+   control Edge supports is prosody: rate + pitch (the payload strings
+   /api/pub/synthesize passes to edge-tts). The chips are quick presets
+   over the same two quantities the pane's sliders set. Single source
+   of truth: the module state below, which is all genEdge reads.
+   - Chip tap: state takes the chip's EXACT rate/pitch (the pitch
+     slider's 5 Hz steps cannot express -12/-8 Hz, so the payload does
+     not round-trip through the sliders), the sliders are moved to
+     match for display, and the chip is marked active.
+   - Slider moved by hand: state is recomputed from the sliders (the
+     pre-chip derivation, unchanged) and every chip is un-marked —
+     manual control wins, no control fights another. */
+let edgeRate = "+0%", edgePitch = "+0Hz";
+let edgePresetSync = false;   /* true while a chip drives the sliders */
+const EDGE_PRESETS = [
+  ["🎙️ ပုံမှန်", "+0%", "+0Hz"],
+  ["🔉 အသံနိမ့်", "+0%", "-12Hz"],
+  ["🔊 အသံမြင့်", "+0%", "+12Hz"],
+  ["🐢 နှေး", "-20%", "+0Hz"],
+  ["🐇 မြန်", "+20%", "+0Hz"],
+  ["🎧 လေးနက်", "-10%", "-8Hz"],
+];
+function edgeProsodyFromSliders(){
+  const rv = parseInt($("edgeRate").value, 10);
+  const pv = parseInt($("edgePitch").value, 10);
+  return {
+    rate: (rv >= 100 ? "+" + (rv - 100) : "-" + (100 - rv)) + "%",
+    pitch: (pv >= 0 ? "+" + pv : "" + pv) + "Hz",
+  };
+}
+function markEdgePreset(chip){
+  document.querySelectorAll("#edgePresetChips .chip")
+    .forEach(c => c.classList.toggle("active", c === chip));
+}
+function applyEdgePreset(chip){
+  edgeRate = chip.dataset.rate;
+  edgePitch = chip.dataset.pitch;
+  edgePresetSync = true;
+  const rs = $("edgeRate"), ps = $("edgePitch");
+  if (rs){ rs.value = String(100 + parseInt(edgeRate, 10)); rs.dispatchEvent(new Event("input", { bubbles: true })); }
+  if (ps){ ps.value = String(parseInt(edgePitch, 10)); ps.dispatchEvent(new Event("input", { bubbles: true })); }
+  edgePresetSync = false;
+  markEdgePreset(chip);
+}
+function initEdgePresetChips(){
+  const row = $("edgePresetChips");
+  if (!row) return;
+  EDGE_PRESETS.forEach(([label, rate, pitch], i)=>{
+    const c = document.createElement("button");
+    c.type = "button"; c.className = "chip" + (i === 0 ? " active" : "");
+    c.textContent = label;
+    c.dataset.rate = rate; c.dataset.pitch = pitch;
+    c.addEventListener("click", ()=> applyEdgePreset(c));
+    row.appendChild(c);
+  });
+  const onSlider = ()=>{
+    if (edgePresetSync) return;   /* a chip is driving: keep its exact values */
+    const p = edgeProsodyFromSliders();
+    edgeRate = p.rate; edgePitch = p.pitch;
+    markEdgePreset(null);
+  };
+  ["edgeRate", "edgePitch"].forEach(id=>{
+    const s = $(id); if (s) s.addEventListener("input", onSlider);
+  });
+}
+
 /* ---------------- Dialogue speaker name chips ----------------
    Once BOTH speaker names are typed, they appear as chips under the
    duo box; tapping one inserts (or swaps) that speaker's "Name: "
@@ -1028,7 +1100,11 @@ function renderSpkChips(){
   const row = $("spkChips"); if (!row) return;
   const duo = $("gemDuo");
   const [n1, n2] = spkNames();
-  row.classList.toggle("hidden", !(duo && duo.checked && n1 && n2));
+  const show = !!(duo && duo.checked && n1 && n2);
+  row.classList.toggle("hidden", !show);
+  /* The name chips now live in their own strip (#gemNameStrip): hide the
+     whole row too so no empty strip shows when the chips are off. */
+  const strip = $("gemNameStrip"); if (strip) strip.classList.toggle("hidden", !show);
   if (n1) $("spkChip1").textContent = "🗣 " + n1;
   if (n2) $("spkChip2").textContent = "🗣 " + n2;
 }
@@ -1897,6 +1973,11 @@ function resetPane(mode){
     setSel("edgeVoice", "my-MM-ThihaNeural");   /* သီဟ — first/default option */
     setRange("edgeRate", "100");                /* markup value="100" */
     setRange("edgePitch", "0");                 /* markup value="0" */
+    /* Prosody preset back to 🎙️ ပုံမှန်: the slider resets above
+       already recomputed the state to neutral and un-marked the
+       chips; re-mark chip 1 and pin the state explicitly. */
+    edgeRate = "+0%"; edgePitch = "+0Hz";
+    markEdgePreset(document.querySelector("#edgePresetChips .chip"));
   } else if (mode === "el"){
     /* The select only ever holds the NLO clone (loadElVoices rule), so
        reset re-selects that option; speed returns to 1.0×. The per-line
@@ -2361,10 +2442,10 @@ async function genEdge(){
   if (disabledModes.includes("edge")) return setMsg("statusMsg", "⛔ ဒီ TTS ကို admin က ပိတ်ထားပါတယ်။", "err");
   const text = $("edgeText").value.trim();
   if (!text) return setMsg("statusMsg", "စာသား အရင် ရေးပါ။", "err");
-  const rv = parseInt($("edgeRate").value,10);
-  const rate = (rv>=100 ? "+"+(rv-100) : "-"+(100-rv)) + "%";
-  const pv = parseInt($("edgePitch").value,10);
-  const pitch = (pv>=0 ? "+"+pv : ""+pv) + "Hz";
+  /* Prosody state: set exactly by the preset chips, or recomputed
+     from the sliders when they are moved by hand (see the Edge
+     prosody preset chips block). Payload strings unchanged. */
+  const rate = edgeRate, pitch = edgePitch;
   const voice = $("edgeVoice").value;
   busy(true); showWake(false);
   try{
@@ -3128,6 +3209,7 @@ function init(){
   fillGeminiVoices();
   initGemStyleChips();
   initElStyleChips();
+  initEdgePresetChips();
   bindCounter("edgeText","edgeCounter",0);
   bindCounter("elText","elCounter",0);
   bindCounter("gemText","gemCounter",0);
