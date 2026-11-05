@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Burmese Voice TTS — Public</title>
+<style>
+  :root{
+    --glass: rgba(255,255,255,.08);
+    --glass-border: rgba(255,255,255,.16);
+    --txt:#f2f4f8; --muted:#aeb8c6;
+    --accent:#4da3ff; --accent2:#7c5cff;
+    --gold:#ffcf4d; --danger:#ff6b6b; --ok:#51d88a;
+    --radius:16px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,"Myanmar Text",sans-serif;
+    color:var(--txt); min-height:100vh;
+    background:
+      radial-gradient(900px 500px at 15% -10%, rgba(124,92,255,.35), transparent 60%),
+      radial-gradient(800px 500px at 110% 10%, rgba(77,163,255,.30), transparent 60%),
+      linear-gradient(160deg,#0d1220 0%,#131a2e 55%,#0a0f1c 100%);
+    background-attachment:fixed;
+  }
+  .wrap{max-width:560px;margin:0 auto;padding:14px 12px 40px;}
+  header.top{display:flex;align-items:center;gap:10px;padding:8px 2px 14px;}
+  header.top .logo{font-size:26px;}
+  header.top h1{font-size:19px;margin:0;font-weight:700;letter-spacing:.2px;}
+  header.top .sub{font-size:11px;color:#0d1220;background:var(--gold);border-radius:20px;padding:2px 8px;font-weight:700;}
+  .card{
+    background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    padding:14px;margin-bottom:12px;
+    box-shadow:0 8px 28px rgba(0,0,0,.35);
+  }
+  h2{font-size:16px;margin:2px 0 8px;}
+  label{display:block;font-size:12.5px;color:var(--muted);margin:10px 0 4px;}
+  input[type=email],input[type=password],input[type=text],input[type=number],select,textarea{
+    width:100%;background:rgba(0,0,0,.28);border:1px solid var(--glass-border);border-radius:10px;
+    color:var(--txt);padding:10px;font-size:14.5px;outline:none;
+  }
+  textarea{resize:vertical;min-height:74px;line-height:1.55;}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+  select option{background:#16203a;color:var(--txt);}
+  button{
+    border:1px solid var(--glass-border);background:rgba(255,255,255,.10);color:var(--txt);
+    border-radius:10px;padding:9px 13px;font-size:14px;cursor:pointer;
+  }
+  button:active{transform:scale(.98);}
+  button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;font-weight:700;}
+  button.big{width:100%;padding:13px;font-size:16px;margin-top:12px;}
+  button.small{padding:5px 10px;font-size:12.5px;}
+  button:disabled{opacity:.45;cursor:not-allowed;}
+  .row{display:flex;gap:8px;flex-wrap:wrap;}
+  .row>*{flex:1;}
+  .hidden{display:none !important;}
+  .muted{color:var(--muted);font-size:12.5px;line-height:1.6;}
+  .msg{font-size:13px;margin-top:9px;min-height:18px;line-height:1.55;}
+  .msg.err{color:var(--danger);} .msg.ok{color:var(--ok);} .msg.info{color:var(--muted);}
+  .warn{background:rgba(255,207,77,.14);border:1px solid rgba(255,207,77,.5);color:var(--gold);
+    border-radius:10px;padding:9px 11px;font-size:12.5px;margin-bottom:12px;line-height:1.55;}
+  .userbar{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .userbar .email{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* Mode tabs */
+  .modeTabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;}
+  .modeTab{position:relative;text-align:left;padding:10px 11px;border-radius:12px;line-height:1.35;}
+  .modeTab .t{font-weight:700;font-size:14px;display:block;}
+  .modeTab .d{font-size:11.5px;color:var(--muted);}
+  .modeTab.active{border-color:var(--accent);background:rgba(77,163,255,.16);}
+  .badgePro{position:absolute;top:7px;right:8px;font-size:10px;font-weight:800;color:#0d1220;
+    background:linear-gradient(135deg,var(--gold),#ffb52e);padding:2px 7px;border-radius:20px;}
+  .badgeFree{position:absolute;top:7px;right:8px;font-size:10px;font-weight:800;color:#062b18;
+    background:linear-gradient(135deg,#6fe3a5,#34c759);padding:2px 7px;border-radius:20px;}
+  .proLock{background:rgba(255,207,77,.12);border:1px dashed rgba(255,207,77,.55);color:#ffe1a1;
+    border-radius:10px;padding:9px 11px;font-size:12.5px;line-height:1.6;margin-top:10px;}
+  .counter{font-size:11.5px;color:var(--muted);text-align:right;margin-top:3px;}
+  .counter.over{color:var(--danger);}
+  .sliderRow{display:flex;align-items:center;gap:10px;margin-top:4px;}
+  .sliderRow input[type=range]{flex:1;accent-color:var(--accent);}
+  .sliderVal{font-size:12.5px;min-width:44px;text-align:right;color:var(--muted);}
+  .volRow{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);}
+  .volRow input[type=range]{flex:1;accent-color:var(--accent2);}
+  audio{width:100%;margin-top:10px;}
+  .dlBtn{display:inline-block;margin-top:8px;color:var(--accent);font-size:13.5px;text-decoration:none;}
+  .keyRow{display:flex;gap:6px;align-items:center;}
+  .keyRow input{flex:1;}
+  .keyRow .eye{flex:0 0 auto;padding:9px 10px;}
+  .profileHead{width:100%;text-align:left;font-weight:700;font-size:15px;display:flex;justify-content:space-between;align-items:center;}
+  .notice{background:rgba(77,163,255,.10);border:1px solid rgba(77,163,255,.35);border-radius:10px;
+    padding:9px 11px;font-size:12.5px;line-height:1.65;margin-top:10px;color:#cfe4ff;}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);
+    border-top-color:#fff;border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-2px;margin-right:6px;}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  a{color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo">🎙️</div>
+    <h1>Burmese Voice TTS</h1>
+    <span class="sub">PUBLIC</span>
+  </header>
+
+  <div id="configWarn" class="warn hidden">⚠️ Supabase ချိတ်ဆက်မှု မပြင်ရသေးပါ — deploy လုပ်ချိန်တွင် ပြင်ပါမည်။ (နည်းပညာ အဖွဲ့ အတွက်: SUPABASE_URL / SUPABASE_ANON_KEY)</div>
+
+  <!-- ============ LOGIN (signed-out view: this card ONLY) ============ -->
+  <section id="loginCard" class="card">
+    <h2>🔐 Login ဝင်ပါ</h2>
+    <p class="muted">ဒီ app ကို သုံးရန် အကောင့် ဝင်ထားရပါမယ်။<br>
+    • <b>Edge TTS</b> — login ဝင်ပြီးရင် <b>အခမဲ့</b> သုံးနိုင်ပါတယ်။<br>
+    • <b>ElevenLabs / Gemini / F5 Clone</b> — <b>Pro</b> feature များ: ကိုယ့် API key ကိုယ် + Pro code လိုပါတယ်။</p>
+    <label>Email</label>
+    <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com">
+    <label>Password</label>
+    <input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••">
+    <div class="row" style="margin-top:14px;">
+      <button id="btnSignIn" class="primary">ဝင်မယ်</button>
+      <button id="btnSignUp">အကောင့်အသစ် ဖွင့်မယ်</button>
+    </div>
+    <div id="authMsg" class="msg info"></div>
+  </section>
+
+  <!-- ============ APP (signed-in view) ============ -->
+  <div id="appArea" class="hidden">
+
+    <div class="card userbar">
+      <span class="email" id="userEmail"></span>
+      <button id="btnSignOut" class="small">ထွက်မယ်</button>
+    </div>
+
+    <div class="card">
+      <!-- Mode switcher -->
+      <div class="modeTabs">
+        <button class="modeTab active" data-mode="edge">
+          <span class="t">Edge TTS</span><span class="d">သီဟ / နီလာ — မြန်မာ အသံ</span>
+          <span class="badgeFree">FREE</span>
+        </button>
+        <button class="modeTab" data-mode="el">
+          <span class="t">ElevenLabs</span><span class="d">ကိုယ့် clone အသံ</span>
+          <span class="badgePro">🔒 PRO</span>
+        </button>
+        <button class="modeTab" data-mode="gemini">
+          <span class="t">Gemini TTS</span><span class="d">Google studio အသံ ၃၀</span>
+          <span class="badgePro">🔒 PRO</span>
+        </button>
+        <button class="modeTab" data-mode="f5">
+          <span class="t">F5 Clone</span><span class="d">နမူနာ အသံကနေ clone</span>
+          <span class="badgePro">🔒 PRO</span>
+        </button>
+      </div>
+
+      <!-- EDGE pane -->
+      <div class="modePane" id="pane-edge">
+        <label>စာသား (အများဆုံး ၆၀၀ လုံး)</label>
+        <textarea id="edgeText" maxlength="900" placeholder="အသံ ပြောင်းချင်တဲ့ မြန်မာ စာသား ရေးပါ...">မင်္ဂလာပါ ရှင်။ ဒီနေ့ အကြောင်းလေး ပြောပြချင်လို့ပါ။</textarea>
+        <div class="counter" id="edgeCounter"></div>
+        <label>အသံ</label>
+        <select id="edgeVoice">
+          <option value="my-MM-ThihaNeural">သီဟ (အမျိုးသား)</option>
+          <option value="my-MM-NilarNeural">နီလာ (အမျိုးသမီး)</option>
+        </select>
+        <label>အသံနှုန်း</label>
+        <div class="sliderRow">
+          <input type="range" id="edgeRate" min="50" max="200" step="5" value="100">
+          <span class="sliderVal" id="edgeRateVal">100%</span>
+        </div>
+        <label>အသံ အနိမ့်အမြင့် (Pitch)</label>
+        <div class="sliderRow">
+          <input type="range" id="edgePitch" min="-50" max="50" step="5" value="0">
+          <span class="sliderVal" id="edgePitchVal">0 Hz</span>
+        </div>
+      </div>
+
+      <!-- ELEVENLABS pane -->
+      <div class="modePane hidden" id="pane-el">
+        <label>စာသား</label>
+        <textarea id="elText" placeholder="ElevenLabs clone အသံနဲ့ ပြောမယ့် စာသား...">မင်္ဂလာပါ။ ကျွန်တော့် အသံနဲ့ ပြောနေတာပါ။</textarea>
+        <div class="counter" id="elCounter"></div>
+        <label>အသံ (Voice)</label>
+        <div class="row">
+          <select id="elVoice" style="flex:2;"><option value="">— မူလ အသံ (default) —</option></select>
+          <button id="btnElVoices" type="button">အသံ စာရင်း ယူမယ်</button>
+        </div>
+        <div class="muted">စာရင်း မယူရင် မူလ အသံနဲ့ ထုတ်ပေးပါမယ်။</div>
+        <div class="proLock hidden" data-prolock></div>
+      </div>
+
+      <!-- GEMINI pane -->
+      <div class="modePane hidden" id="pane-gemini">
+        <label>စာသား</label>
+        <textarea id="gemText" placeholder="Gemini အသံနဲ့ ပြောမယ့် စာသား...">မင်္ဂလာပါ ရှင်။ ဒီနေ့ အကြောင်းလေး ပြောပြချင်လို့ပါ။</textarea>
+        <div class="counter" id="gemCounter"></div>
+        <label>အသံ (Studio voice)</label>
+        <select id="gemVoice"></select>
+        <label>ပြောဟန် (Style) — မဖြစ်မနေ မလိုပါ</label>
+        <input type="text" id="gemStyle" placeholder="ဥပမာ: Say cheerfully / ပျော်ပျော်ရွှင်ရွှင် ပြောပါ">
+        <label style="margin-top:12px;"><input type="checkbox" id="gemDuo" style="width:auto;"> စကားပြော နှစ်ယောက် (Dialogue)</label>
+        <div id="gemDuoBox" class="hidden">
+          <div class="row">
+            <input type="text" id="spk1Name" placeholder="နာမည် ၁ (ဥပမာ Aung)">
+            <select id="spk1Voice"></select>
+          </div>
+          <div class="row" style="margin-top:6px;">
+            <input type="text" id="spk2Name" placeholder="နာမည် ၂ (ဥပမာ May)">
+            <select id="spk2Voice"></select>
+          </div>
+          <div class="muted">စာသားကို <b>Aung: ...</b> / <b>May: ...</b> ဆိုပြီး တစ်ကြောင်းစီ ရေးပါ။ (တစ်ယောက်တည်း အသံ ဆိုရင် ဒီ အဆင့်ကို ကျော်လို့ ရပါတယ်။)</div>
+        </div>
+        <div class="proLock hidden" data-prolock></div>
+      </div>
+
+      <!-- F5 CLONE pane -->
+      <div class="modePane hidden" id="pane-f5">
+        <label>နမူနာ အသံဖိုင် (၅–၁၀ စက္ကန့် အသံကြည် ဖိုင်)</label>
+        <input type="file" id="f5Ref" accept="audio/*">
+        <label>နမူနာ အသံထဲက စာသား (အတိအကျ)</label>
+        <textarea id="f5RefText" style="min-height:48px;" placeholder="နမူနာ အသံထဲမှာ ပြောထားတဲ့ စာသား အတိအကျ ရေးပါ"></textarea>
+        <label>ပြောမယ့် စာသား အသစ်</label>
+        <textarea id="f5Text" placeholder="clone အသံနဲ့ ပြောမယ့် စာသား အသစ်..."></textarea>
+        <div class="counter" id="f5Counter"></div>
+        <label>အသံနှုန်း</label>
+        <div class="sliderRow">
+          <input type="range" id="f5Speed" min="0.5" max="2" step="0.25" value="1">
+          <span class="sliderVal" id="f5SpeedVal">1.0×</span>
+        </div>
+        <div class="proLock hidden" data-prolock></div>
+      </div>
+
+      <!-- Shared volume -->
+      <div class="volRow">
+        <span style="font-size:13px;">🔊 အသံအတိုး</span>
+        <input type="range" id="volSlider" min="50" max="200" step="5" value="100">
+        <span class="sliderVal" id="volVal">100%</span>
+      </div>
+
+      <button id="btnGenerate" class="primary big">🔊 အသံ ထုတ်မယ်</button>
+      <div id="statusMsg" class="msg info"></div>
+      <div id="wakeBox" class="proLock hidden">
+        😴 Server အိပ်ပျော်နေပါတယ် — ပြန် နိုးဖို့ ~၁ မိနစ် လောက် ကြာနိုင်ပါတယ်။
+        <div style="margin-top:8px;"><button id="btnRetry" type="button">🔁 ပြန် စမ်းမယ်</button></div>
+      </div>
+
+      <div id="resultBox" class="hidden">
+        <audio id="player" controls></audio>
+        <a id="dlLink" class="dlBtn" href="#" download>⬇️ အသံဖိုင် ဒေါင်းလုပ်ဆွဲမယ်</a>
+      </div>
+    </div>
+
+    <!-- ============ MY PROFILE ============ -->
+    <div class="card">
+      <button class="profileHead" id="profileToggle" type="button">
+        <span>👤 My Profile — API Key များ</span><span id="profileChevron">▸</span>
+      </button>
+      <div id="profileBody" class="hidden">
+        <div class="notice">
+          🔑 Key တွေကို <b>သင့် အကောင့်ထဲမှာပဲ</b> သိမ်းထားပြီး သင့် တောင်းဆိုမှုတွေ အတွက်ပဲ သုံးပါတယ်။
+          သူများ မမြင်နိုင်ပါ။ ဒီ app အတွက် <b>သီးသန့် ထုတ်ထားတဲ့ key</b> ကိုပဲ ထည့်သုံးဖို့ အကြံပြုပါတယ် —
+          မသုံးတော့ရင် မူရင်း နေရာကနေ အချိန်မရွေး ပြန် ဖျက်/ပိတ် လိုက်လို့ ရပါတယ်။
+        </div>
+
+        <label>ElevenLabs API Key</label>
+        <div class="keyRow">
+          <input type="password" id="keyEl" placeholder="sk_..." autocomplete="off">
+          <button class="eye" type="button" data-eye="keyEl">👁️</button>
+        </div>
+
+        <label>Gemini API Key</label>
+        <div class="keyRow">
+          <input type="password" id="keyGemini" placeholder="AIza..." autocomplete="off">
+          <button class="eye" type="button" data-eye="keyGemini">👁️</button>
+        </div>
+        <div class="muted">Gemini key မရှိသေးရင် Google AI Studio မှာ <b>အခမဲ့</b> ထုတ်လို့ ရပါတယ် →
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> (Get API key နှိပ်ရုံပါပဲ)</div>
+
+        <label>HuggingFace Token (F5 Clone အတွက်)</label>
+        <div class="keyRow">
+          <input type="password" id="keyHf" placeholder="hf_..." autocomplete="off">
+          <button class="eye" type="button" data-eye="keyHf">👁️</button>
+        </div>
+
+        <label>⭐ Pro Code (UUID) — ပိုင်ရှင် ပေးထားတဲ့ code</label>
+        <div class="keyRow">
+          <input type="password" id="keyPro" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
+          <button class="eye" type="button" data-eye="keyPro">👁️</button>
+        </div>
+        <div class="muted">Pro feature တွေ (ElevenLabs / Gemini / F5) သုံးရန် Pro code လိုပါတယ်။ မရှိရင် app ပိုင်ရှင်ထံ တောင်းပါ။</div>
+
+        <button id="btnSaveKeys" class="primary" style="width:100%;margin-top:14px;">💾 သိမ်းမယ်</button>
+        <div id="profileMsg" class="msg info"></div>
+      </div>
+    </div>
+
+    <p class="muted" style="text-align:center;">Edge TTS = အခမဲ့ · Pro feature များ = ကိုယ့် key + Pro code</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+"use strict";
+/* =====================================================================
+   DEPLOY-TIME CONFIG — change these three lines only.
+   ===================================================================== */
+const PUBLIC_API        = "https://burmese-voice-tts-public.onrender.com"; // public Render service (placeholder)
+const SUPABASE_URL      = "https://nfdkvungccscalshjmzo.supabase.co";              // ← deploy: real project URL
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mZGt2dW5nY2NzY2Fsc2hqbXpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM4NTk3NjgsImV4cCI6MjEwOTQzNTc2OH0.ldWyHiPwsebTsjxgQsCarYtlTcBEEUcD4piJlQfdbIo";                        // ← deploy: real anon (public) key
+/* ===================================================================== */
+
+const $ = (id) => document.getElementById(id);
+const sb = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+if (!sb || SUPABASE_URL.includes("YOUR-")) $("configWarn").classList.remove("hidden");
+
+let session = null;                 // Supabase session
+let keys = { el_key:"", gemini_key:"", hf_token:"", pro_code:"" };
+let currentMode = "edge";
+let lastObjectUrl = null;
+
+const GEMINI_VOICES = ["Kore","Zephyr","Puck","Charon","Fenrir","Leda","Orus","Aoede","Callirrhoe","Autonoe",
+  "Enceladus","Iapetus","Umbriel","Algieba","Despina","Erinome","Algenib","Rasalgethi","Laomedeia","Alnilam",
+  "Schedar","Gacrux","Pulcherrima","Achird","Zubenelgenubi","Vindemiatrix","Sadachbia","Sadaltager","Sulafat","Achernar"];
+
+/* ---------------- small helpers ---------------- */
+function setMsg(id, text, cls){ const el=$(id); el.textContent=text||""; el.className="msg "+(cls||"info"); }
+function busy(on, label){
+  const b=$("btnGenerate"); b.disabled=on;
+  b.innerHTML = on ? '<span class="spin"></span>'+(label||"ထုတ်နေပါတယ်...") : "🔊 အသံ ထုတ်မယ်";
+}
+function showWake(on){ $("wakeBox").classList.toggle("hidden", !on); if(on) setMsg("statusMsg",""); }
+function bindCounter(textId, counterId, cap){
+  const t=$(textId), c=$(counterId); if(!t||!c) return;
+  const upd=()=>{ const n=t.value.length; c.textContent = cap ? (n+" / "+cap+" လုံး") : (n+" လုံး");
+    c.classList.toggle("over", cap ? n>cap : false); };
+  t.addEventListener("input", upd); upd();
+}
+
+/* ---------------- volume processing (normalize + gain → WAV) ---------------- */
+function audioCtx(){ return new (window.AudioContext||window.webkitAudioContext)(); }
+async function applyVolume(blob, pct){
+  // Decode → peak-normalize to 0.99 → apply slider gain → render to WAV.
+  // Falls back to the original blob on any error.
+  try{
+    const raw = await blob.arrayBuffer();
+    const ctx = audioCtx();
+    const buf = await ctx.decodeAudioData(raw.slice(0));
+    if (ctx.close) ctx.close();
+    let peak = 0;
+    for (let ch=0; ch<buf.numberOfChannels; ch++){
+      const d = buf.getChannelData(ch);
+      for (let i=0;i<d.length;i++){ const v=Math.abs(d[i]); if(v>peak) peak=v; }
+    }
+    const gain = (peak>0 ? 0.99/peak : 1) * (pct/100);
+    const off = new OfflineAudioContext(buf.numberOfChannels, buf.length, buf.sampleRate);
+    const src = off.createBufferSource(); src.buffer = buf;
+    const g = off.createGain(); g.gain.value = gain;
+    src.connect(g); g.connect(off.destination); src.start();
+    const rendered = await off.startRendering();
+    return new Blob([encodeWav(rendered)], {type:"audio/wav"});
+  }catch(e){ return blob; }
+}
+function encodeWav(buffer){
+  const nCh = buffer.numberOfChannels, sr = buffer.sampleRate, len = buffer.length;
+  const bytes = 44 + len*nCh*2, ab = new ArrayBuffer(bytes), v = new DataView(ab);
+  const wstr=(o,s)=>{ for(let i=0;i<s.length;i++) v.setUint8(o+i, s.charCodeAt(i)); };
+  wstr(0,"RIFF"); v.setUint32(4, bytes-8, true); wstr(8,"WAVE"); wstr(12,"fmt ");
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,nCh,true);
+  v.setUint32(24,sr,true); v.setUint32(28,sr*nCh*2,true); v.setUint16(32,nCh*2,true);
+  v.setUint16(34,16,true); wstr(36,"data"); v.setUint32(40, len*nCh*2, true);
+  const chans=[]; for(let c=0;c<nCh;c++) chans.push(buffer.getChannelData(c));
+  let off=44;
+  for(let i=0;i<len;i++) for(let c=0;c<nCh;c++){
+    let s=Math.max(-1, Math.min(1, chans[c][i]));
+    v.setInt16(off, s<0 ? s*0x8000 : s*0x7FFF, true); off+=2;
+  }
+  return ab;
+}
+
+/* ---------------- API layer (auth + wake handling) ---------------- */
+class WakeError extends Error {}
+async function authHeader(){
+  if (!sb) return {};
+  const { data } = await sb.auth.getSession();
+  const tok = data && data.session ? data.session.access_token : (session ? session.access_token : "");
+  return tok ? { "Authorization": "Bearer " + tok } : {};
+}
+async function apiFetch(path, opts){
+  opts = opts || {};
+  const headers = Object.assign({}, opts.headers||{}, await authHeader());
+  let resp;
+  try{
+    resp = await fetch(PUBLIC_API + path, Object.assign({}, opts, { headers }));
+  }catch(e){ throw new WakeError("network"); }
+  if (resp.status === 502 || resp.status === 503) throw new WakeError("http "+resp.status);
+  return resp;
+}
+async function apiErrorText(resp){
+  try{
+    const d = await resp.clone().json();
+    return d.detail || d.message || d.error || ("အမှား "+resp.status);
+  }catch(e){ return "အမှား "+resp.status; }
+}
+function proHeaders(extra){
+  const h = {};
+  if (keys.el_key)     h["X-EL-Key"] = keys.el_key;
+  if (keys.gemini_key) h["X-Gemini-Key"] = keys.gemini_key;
+  if (keys.hf_token)   h["X-HF-Token"] = keys.hf_token;
+  if (keys.pro_code)   h["X-Pro-Code"] = keys.pro_code;
+  return Object.assign(h, extra||{});
+}
+
+/* ---------------- usage logging (fire-and-forget) ---------------- */
+function logUsage(mode, chars){
+  try{
+    if (!sb || !session) return;
+    sb.from("usage_log").insert({ user_id: session.user.id, mode: mode, chars: chars })
+      .then(()=>{}, ()=>{});
+  }catch(e){}
+}
+
+/* ---------------- profile keys (Supabase user_keys, own row via RLS) ---------------- */
+async function loadKeys(){
+  if (!sb || !session) return;
+  try{
+    const { data, error } = await sb.from("user_keys")
+      .select("el_key, gemini_key, hf_token, pro_code")
+      .eq("user_id", session.user.id).maybeSingle();
+    if (!error && data){
+      keys = { el_key:data.el_key||"", gemini_key:data.gemini_key||"", hf_token:data.hf_token||"", pro_code:data.pro_code||"" };
+    }
+  }catch(e){}
+  $("keyEl").value = keys.el_key; $("keyGemini").value = keys.gemini_key;
+  $("keyHf").value = keys.hf_token; $("keyPro").value = keys.pro_code;
+  refreshProLocks();
+}
+async function saveKeys(){
+  if (!sb || !session) return;
+  keys = {
+    el_key: $("keyEl").value.trim(), gemini_key: $("keyGemini").value.trim(),
+    hf_token: $("keyHf").value.trim(), pro_code: $("keyPro").value.trim()
+  };
+  setMsg("profileMsg", "သိမ်းနေပါတယ်...", "info");
+  const { error } = await sb.from("user_keys").upsert({
+    user_id: session.user.id, el_key: keys.el_key, gemini_key: keys.gemini_key,
+    hf_token: keys.hf_token, pro_code: keys.pro_code, updated_at: new Date().toISOString()
+  }, { onConflict: "user_id" });
+  if (error) setMsg("profileMsg", "သိမ်း မရပါ: " + error.message, "err");
+  else { setMsg("profileMsg", "✅ သိမ်းပြီးပါပြီ။", "ok"); refreshProLocks(); }
+}
+
+/* ---------------- Pro lock notices ---------------- */
+const PRO_KEY_FIELD = { el:"el_key", gemini:"gemini_key", f5:"hf_token" };
+const PRO_KEY_LABEL = { el:"ElevenLabs API Key", gemini:"Gemini API Key", f5:"HuggingFace Token" };
+function refreshProLocks(){
+  document.querySelectorAll("[data-prolock]").forEach(el => {
+    const pane = el.closest(".modePane"); if (!pane) return;
+    const mode = pane.id.replace("pane-","");
+    const missing = [];
+    if (!keys.pro_code) missing.push("Pro Code");
+    if (PRO_KEY_FIELD[mode] && !keys[PRO_KEY_FIELD[mode]]) missing.push(PRO_KEY_LABEL[mode]);
+    if (missing.length){
+      el.innerHTML = "🔒 ဒီ feature သုံးရန် <b>My Profile</b> မှာ " + missing.join(" နှင့် ") + " ထည့်ထားဖို့ လိုပါတယ်။";
+      el.classList.remove("hidden");
+    } else el.classList.add("hidden");
+  });
+  const proMode = ["el","gemini","f5"].includes(currentMode);
+  $("btnGenerate").disabled = proMode && (!keys.pro_code || (PRO_KEY_FIELD[currentMode] && !keys[PRO_KEY_FIELD[currentMode]]));
+}
+
+/* ---------------- result ---------------- */
+async function showResult(blob, mode, chars, ext){
+  const vol = parseInt($("volSlider").value, 10) || 100;
+  const processed = await applyVolume(blob, vol);
+  if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
+  lastObjectUrl = URL.createObjectURL(processed);
+  $("player").src = lastObjectUrl;
+  const a = $("dlLink");
+  a.href = lastObjectUrl;
+  a.download = "burmese-tts-" + mode + (processed.type.includes("wav") ? ".wav" : (ext||".mp3"));
+  $("resultBox").classList.remove("hidden");
+  setMsg("statusMsg", "✅ အသံ ရပါပြီ။", "ok");
+  logUsage(mode, chars);
+}
+
+/* ---------------- generators ---------------- */
+async function genEdge(){
+  const text = $("edgeText").value.trim();
+  if (!text) return setMsg("statusMsg", "စာသား အရင် ရေးပါ။", "err");
+  if (text.length > 600) return setMsg("statusMsg", "စာသား ၆၀၀ လုံး ထက် ကျော်နေပါတယ် — လျှော့ရေးပါ။", "err");
+  const rv = parseInt($("edgeRate").value,10);
+  const rate = (rv>=100 ? "+"+(rv-100) : "-"+(100-rv)) + "%";
+  const pv = parseInt($("edgePitch").value,10);
+  const pitch = (pv>=0 ? "+"+pv : ""+pv) + "Hz";
+  busy(true); showWake(false);
+  try{
+    const resp = await apiFetch("/api/pub/synthesize", {
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ text, voice: $("edgeVoice").value, rate, pitch })
+    });
+    if (!resp.ok) throw new Error(await apiErrorText(resp));
+    showResult(await resp.blob(), "edge", text.length, ".mp3");
+  }catch(e){ handleGenError(e); }
+  busy(false);
+}
+
+async function genEl(){
+  const text = $("elText").value.trim();
+  if (!text) return setMsg("statusMsg", "စာသား အရင် ရေးပါ။", "err");
+  busy(true); showWake(false);
+  try{
+    const body = { text, model_id: "eleven_v4" };
+    const vid = $("elVoice").value; if (vid) body.voice_id = vid;
+    const resp = await apiFetch("/api/pub/el/tts", {
+      method:"POST", headers: proHeaders({ "Content-Type":"application/json" }),
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) throw new Error(await apiErrorText(resp));
+    showResult(await resp.blob(), "el", text.length, ".mp3");
+  }catch(e){ handleGenError(e); }
+  busy(false);
+}
+async function loadElVoices(){
+  if (!keys.el_key) return setMsg("statusMsg", "My Profile မှာ ElevenLabs API Key အရင် ထည့်ပါ။", "err");
+  setMsg("statusMsg", "အသံ စာရင်း ယူနေပါတယ်...", "info");
+  try{
+    const resp = await apiFetch("/api/pub/el/voices", { headers: proHeaders() });
+    if (!resp.ok) throw new Error(await apiErrorText(resp));
+    const d = await resp.json();
+    const list = Array.isArray(d) ? d : (d.voices || []);
+    const sel = $("elVoice");
+    sel.innerHTML = '<option value="">— မူလ အသံ (default) —</option>';
+    list.forEach(v=>{
+      const id = v.voice_id || v.id, name = v.name || id;
+      if (id){ const o=document.createElement("option"); o.value=id; o.textContent=name; sel.appendChild(o); }
+    });
+    setMsg("statusMsg", "✅ အသံ "+list.length+" ခု ရပါပြီ။", "ok");
+  }catch(e){ handleGenError(e); }
+}
+
+async function genGemini(){
+  const text = $("gemText").value.trim();
+  if (!text) return setMsg("statusMsg", "စာသား အရင် ရေးပါ။", "err");
+  busy(true); showWake(false);
+  try{
+    const body = { text, voice: $("gemVoice").value };
+    const style = $("gemStyle").value.trim(); if (style) body.style = style;
+    if ($("gemDuo").checked){
+      const n1=$("spk1Name").value.trim(), n2=$("spk2Name").value.trim();
+      if (n1 && n2) body.speakers = [
+        { speaker:n1, voice:$("spk1Voice").value }, { speaker:n2, voice:$("spk2Voice").value }
+      ];
+    }
+    const resp = await apiFetch("/api/pub/gemini/tts", {
+      method:"POST", headers: proHeaders({ "Content-Type":"application/json" }),
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) throw new Error(await apiErrorText(resp));
+    showResult(await resp.blob(), "gemini", text.length, ".wav");
+  }catch(e){ handleGenError(e); }
+  busy(false);
+}
+
+async function genF5(){
+  const text = $("f5Text").value.trim();
+  const refText = $("f5RefText").value.trim();
+  const file = $("f5Ref").files[0];
+  if (!file) return setMsg("statusMsg", "နမူနာ အသံဖိုင် အရင် ရွေးပါ။", "err");
+  if (!refText) return setMsg("statusMsg", "နမူနာ အသံထဲက စာသား ရေးပါ။", "err");
+  if (!text) return setMsg("statusMsg", "ပြောမယ့် စာသား အသစ် ရေးပါ။", "err");
+  busy(true, "Clone job ပို့နေပါတယ်..."); showWake(false);
+  try{
+    const fd = new FormData();
+    fd.append("text", text); fd.append("ref_text", refText);
+    fd.append("speed", $("f5Speed").value); fd.append("ref_audio", file);
+    const resp = await apiFetch("/api/pub/clone/jobs", { method:"POST", headers: proHeaders(), body: fd });
+    if (!resp.ok) throw new Error(await apiErrorText(resp));
+    const job = await resp.json();
+    const jobId = job.job_id || job.id;
+    if (!jobId) throw new Error("Job ID မရပါ။");
+    // poll
+    const deadline = Date.now() + 5*60*1000;
+    while (Date.now() < deadline){
+      await new Promise(r=>setTimeout(r, 3000));
+      const pr = await apiFetch("/api/pub/clone/jobs/" + encodeURIComponent(jobId), { headers: proHeaders() });
+      if (!pr.ok) throw new Error(await apiErrorText(pr));
+      const st = await pr.json();
+      const status = (st.status || st.state || "").toLowerCase();
+      if (["done","completed","complete","success","succeeded"].includes(status)){
+        const ar = await apiFetch("/api/pub/clone/jobs/" + encodeURIComponent(jobId) + "/audio", { headers: proHeaders() });
+        if (!ar.ok) throw new Error(await apiErrorText(ar));
+        showResult(await ar.blob(), "f5", text.length, ".wav");
+        busy(false); return;
+      }
+      if (["error","failed","failure"].includes(status)) throw new Error(st.error || st.detail || "Clone job မအောင်မြင်ပါ။");
+      setMsg("statusMsg", "⏳ Clone လုပ်နေပါတယ်... (" + (st.status||"running") + ")", "info");
+    }
+    throw new Error("အချိန် ကြာလွန်း နေပါတယ် — ခဏနေ ပြန် စမ်းပါ။");
+  }catch(e){ handleGenError(e); }
+  busy(false);
+}
+
+function handleGenError(e){
+  if (e instanceof WakeError){ showWake(true); return; }
+  showWake(false);
+  setMsg("statusMsg", "❌ " + (e && e.message ? e.message : "တစ်ခုခု မှားနေပါတယ်။"), "err");
+}
+function generate(){
+  ({ edge:genEdge, el:genEl, gemini:genGemini, f5:genF5 })[currentMode]();
+}
+
+/* ---------------- auth ---------------- */
+async function signIn(){
+  if (!sb) return setMsg("authMsg", "Supabase မချိတ်ရသေးပါ။", "err");
+  const email = $("authEmail").value.trim(), pass = $("authPass").value;
+  if (!email || !pass) return setMsg("authMsg", "Email နှင့် Password ထည့်ပါ။", "err");
+  setMsg("authMsg", "ဝင်နေပါတယ်...", "info");
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) setMsg("authMsg", "ဝင်မရပါ: " + error.message, "err");
+}
+async function signUp(){
+  if (!sb) return setMsg("authMsg", "Supabase မချိတ်ရသေးပါ။", "err");
+  const email = $("authEmail").value.trim(), pass = $("authPass").value;
+  if (!email || !pass) return setMsg("authMsg", "Email နှင့် Password ထည့်ပါ။", "err");
+  if (pass.length < 6) return setMsg("authMsg", "Password အနည်းဆုံး ၆ လုံး ရှိရပါမယ်။", "err");
+  setMsg("authMsg", "အကောင့် ဖွင့်နေပါတယ်...", "info");
+  const { data, error } = await sb.auth.signUp({ email, password: pass });
+  if (error) return setMsg("authMsg", "ဖွင့်မရပါ: " + error.message, "err");
+  if (data && data.session) setMsg("authMsg", "✅ အကောင့် ဖွင့်ပြီး ဝင်ပြီးပါပြီ။", "ok");
+  else setMsg("authMsg", "✅ အကောင့် ဖွင့်ပြီးပါပြီ။ Email ထဲက confirmation link ကို နှိပ်ပြီးမှ ဝင်ပါ။", "ok");
+}
+function renderAuth(){
+  const logged = !!session;
+  $("loginCard").classList.toggle("hidden", logged);
+  $("appArea").classList.toggle("hidden", !logged);
+  if (logged) $("userEmail").textContent = "👤 " + (session.user.email || "");
+}
+
+/* ---------------- wiring ---------------- */
+function fillGeminiVoices(){
+  ["gemVoice","spk1Voice","spk2Voice"].forEach(id=>{
+    const sel=$(id); sel.innerHTML="";
+    GEMINI_VOICES.forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=v; sel.appendChild(o); });
+    sel.value = "Kore";
+  });
+  $("spk2Voice").value = "Puck";
+}
+function init(){
+  fillGeminiVoices();
+  bindCounter("edgeText","edgeCounter",600);
+  bindCounter("elText","elCounter",0);
+  bindCounter("gemText","gemCounter",0);
+  bindCounter("f5Text","f5Counter",0);
+
+  document.querySelectorAll(".modeTab").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      document.querySelectorAll(".modeTab").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      currentMode = btn.dataset.mode;
+      document.querySelectorAll(".modePane").forEach(p=>p.classList.add("hidden"));
+      $("pane-"+currentMode).classList.remove("hidden");
+      setMsg("statusMsg",""); showWake(false);
+      refreshProLocks();
+    });
+  });
+
+  const sliderSync = (sId, vId, fmt)=>{
+    const s=$(sId); const upd=()=>{ $(vId).textContent = fmt(s.value); }; s.addEventListener("input", upd); upd();
+  };
+  sliderSync("edgeRate","edgeRateVal", v=>v+"%");
+  sliderSync("edgePitch","edgePitchVal", v=>(v>0?"+"+v:""+v)+" Hz");
+  sliderSync("f5Speed","f5SpeedVal", v=>parseFloat(v).toFixed(2).replace(/0$/,"")+"×");
+
+  const vol = $("volSlider");
+  const savedVol = localStorage.getItem("bvtts_pub_volume");
+  if (savedVol) vol.value = savedVol;
+  const volUpd = ()=>{ $("volVal").textContent = vol.value+"%"; localStorage.setItem("bvtts_pub_volume", vol.value); };
+  vol.addEventListener("input", volUpd); volUpd();
+
+  $("gemDuo").addEventListener("change", e=> $("gemDuoBox").classList.toggle("hidden", !e.target.checked));
+  $("btnGenerate").addEventListener("click", generate);
+  $("btnRetry").addEventListener("click", ()=>{ showWake(false); generate(); });
+  $("btnElVoices").addEventListener("click", loadElVoices);
+  $("btnSignIn").addEventListener("click", signIn);
+  $("btnSignUp").addEventListener("click", signUp);
+  $("btnSignOut").addEventListener("click", async ()=>{ if (sb) await sb.auth.signOut(); });
+  $("profileToggle").addEventListener("click", ()=>{
+    const body=$("profileBody"), open=body.classList.toggle("hidden")===false;
+    $("profileChevron").textContent = open ? "▾" : "▸";
+  });
+  $("btnSaveKeys").addEventListener("click", saveKeys);
+  document.querySelectorAll("[data-eye]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const inp=$(b.dataset.eye);
+      inp.type = inp.type==="password" ? "text" : "password";
+    });
+  });
+
+  if (sb){
+    sb.auth.onAuthStateChange(async (_evt, sess)=>{
+      session = sess;
+      renderAuth();
+      if (sess) await loadKeys(); else refreshProLocks();
+    });
+    sb.auth.getSession().then(({data})=>{
+      session = data.session; renderAuth();
+      if (session) loadKeys();
+    });
+  }
+  refreshProLocks();
+}
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
