@@ -537,7 +537,7 @@
           <button id="btnElDelete" type="button" title="ရွေးထားတဲ့ အသံ ဖျက်မယ်" disabled>🗑️</button>
         </div>
         <select id="elVoice" class="hidden"></select>
-        <div class="muted hidden" id="elNoVoices">«NLO» clone အသံ မတွေ့ပါ — အောက်က «အသံ အသစ် ထည့်» မှာ «NLO» နာမည်နဲ့ အရင် ထည့်ပါ။</div>
+        <div class="muted hidden" id="elNoVoices">Clone အသံ မတွေ့ပါ — အောက်က «အသံ အသစ် ထည့်» မှာ အရင် ထည့်ပါ။</div>
         <button class="profileHead" id="elCloneToggle" type="button" style="margin-top:12px;">
           <span>➕ အသံ အသစ် ထည့်</span><span id="elCloneChevron">▸</span>
         </button>
@@ -1979,10 +1979,10 @@ function resetPane(mode){
     edgeRate = "+0%"; edgePitch = "+0Hz";
     markEdgePreset(document.querySelector("#edgePresetChips .chip"));
   } else if (mode === "el"){
-    /* The select only ever holds the NLO clone (loadElVoices rule), so
-       reset re-selects that option; speed returns to 1.0×. The per-line
-       style toggle goes off; tags in the text itself stay (Reset never
-       rewrites text content). */
+    /* Reset re-selects the first picker option (the scope-aware list
+       sorts the NLO clone first when present); speed returns to 1.0×.
+       The per-line style toggle goes off; tags in the text itself stay
+       (Reset never rewrites text content). */
     const sel = $("elVoice");
     if (sel && sel.options.length) setSel("elVoice", sel.options[0].value);
     setRange("elSpeed", "1");
@@ -2519,12 +2519,13 @@ async function genEl(){
 /* ---------------- EL voice list cache (localStorage) ----------------
    The ElevenLabs picker used to start empty after every reload, so the
    user had to tap 🔄 before each session. The fetched list (after the
-   NLO-only filter) is now cached locally, restored at sign-in, then
+   scope-aware filter) is now cached locally, restored at sign-in, then
    silently refreshed. The cache is keyed by a SCOPE — which credential
    path produced the list plus a one-way hash of that credential — so a
    key/code change ignores the old cache. Raw keys/codes are NEVER
    stored, only the hash. */
-const EL_VOICES_CACHE_KEY = "bvtts_pub_elvoices";
+const EL_VOICES_CACHE_KEY = "bvtts_pub_elvoices_v2";
+const EL_PROTECTED_VOICE_IDS = ["dwUkioTAzfgjL4m7E6As", "RANtSKxEy3vvVXaqppeT"];
 function elScopeHash(str){
   let h1 = 5381, h2 = 52711;
   const s = String(str || "");
@@ -2578,7 +2579,13 @@ function populateElVoices(voices, selectedId){
   if (selectedId && sel.querySelector('option[value="' + selectedId + '"]')) sel.value = selectedId;
   else if (sel.options.length) sel.value = sel.options[0].value;
   syncSelectButton("elVoice");
-  $("elNoVoices").classList.toggle("hidden", sel.options.length > 0);
+  const elNoVoices = $("elNoVoices");
+  if (sel.options.length === 0){
+    elNoVoices.textContent = unlockVia("el") === "code"
+      ? "«NLO» clone အသံ မတွေ့ပါ။"
+      : "Clone အသံ မတွေ့ပါ — အောက်က «အသံ အသစ် ထည့်» မှာ အရင် ထည့်ပါ။";
+  }
+  elNoVoices.classList.toggle("hidden", sel.options.length > 0);
   syncElDeleteBtn();
 }
 /* Persist just the current selection into the cache (picker change). */
@@ -2596,7 +2603,11 @@ function saveElSelected(){
     writeElVoicesCache(Array.from(sel.options).map(o=>({ voice_id:o.value, name:o.textContent })), sel.value);
   }
 }
-/* Fetch + filter the EL voice list (throws on HTTP error, with .status). */
+/* Fetch + filter the EL voice list (throws on HTTP error, with .status).
+   Filtering is scope-aware: a Pro-code visitor is using the owner's
+   server key, so that scope still sees only the exact-"NLO" clone. Own-key
+   and owner scopes see their cloned/professional voices, except the two
+   legacy core voices, with exact-"NLO" sorted first. */
 async function fetchElVoices(){
   const resp = await apiFetch("/api/pub/el/voices", { headers: proHeadersFor("el") });
   if (!resp.ok){ const err = new Error(await apiErrorText(resp)); err.status = resp.status; throw err; }
@@ -2604,17 +2615,38 @@ async function fetchElVoices(){
   const list = Array.isArray(d) ? d : (d.voices || []);
   /* Clone voices only: premade English voices (Roger/George/…) are dropped.
      Entries without a category field (old server shape) are kept. */
-  const clones = list.filter(v=>{
-    const cat = v && v.category;
-    return !cat || cat === "cloned" || cat === "professional";
+  const clones = [];
+  list.forEach(v=>{
+    if (!v) return;
+    const id = v.voice_id || v.id;
+    if (!id) return;
+    const cat = v.category;
+    if (cat && cat !== "cloned" && cat !== "professional") return;
+    clones.push({ voice_id:id, name:v.name || id });
   });
-  /* Only the single clone named exactly "NLO" is offered (first match). */
-  const nlo = clones.find(v => ((v && v.name) || "").trim().toLowerCase() === "nlo");
-  const voices = [];
-  if (nlo){
-    const id = nlo.voice_id || nlo.id;
-    if (id) voices.push({ voice_id:id, name:nlo.name || id });
+  const isExactNlo = v => (v.name || "").trim().toLowerCase() === "nlo";
+  const scope = unlockVia("el");
+  let voices;
+  if (scope === "own" || scope === "owner"){
+    voices = clones.filter(v => !EL_PROTECTED_VOICE_IDS.includes(v.voice_id));
+    /* Stable partition: exact-"NLO" first, all other voices keep their
+       server order so the default selection remains NLO when present. */
+    voices = voices.filter(isExactNlo).concat(voices.filter(v => !isExactNlo(v)));
+  } else {
+    /* "code" and any unknown/empty scope use the safest legacy behaviour. */
+    const nlo = clones.find(isExactNlo);
+    voices = nlo ? [nlo] : [];
   }
+  /* Disambiguate duplicate display names only, using the voice-id suffix. */
+  const nameCounts = {};
+  voices.forEach(v=>{
+    const key = (v.name || "").trim().toLowerCase();
+    nameCounts[key] = (nameCounts[key] || 0) + 1;
+  });
+  voices.forEach(v=>{
+    const key = (v.name || "").trim().toLowerCase();
+    if (nameCounts[key] > 1) v.name = v.name + " · " + String(v.voice_id).slice(-4);
+  });
   return voices;
 }
 async function loadElVoices(){
@@ -2652,7 +2684,10 @@ async function initElVoices(){
   }
 }
 
-function syncElDeleteBtn(){ $("btnElDelete").disabled = !$("elVoice").value; }
+function syncElDeleteBtn(){
+  const vid = $("elVoice").value;
+  $("btnElDelete").disabled = !vid || EL_PROTECTED_VOICE_IDS.includes(vid);
+}
 function elProNotice(){
   if (proUnlocked("el")) return false;
   setMsg("statusMsg", PRO_LOCKED_TEXT, "err");
@@ -2678,12 +2713,20 @@ async function addElVoice(){
     const d = await resp.json();
     const newId = d.voice_id || d.id || "";
     await loadElVoices();
-    /* Same "NLO"-only rule: select the new voice only if it is in the list. */
-    if (newId && $("elVoice").querySelector('option[value="' + newId + '"]')) $("elVoice").value = newId;
+    /* The refreshed picker follows the scope-aware filter above. Select
+       the new voice when it is present; if it is missing, creation may
+       have succeeded upstream but the add is not complete in the UI, so
+       do not claim full success. */
+    const newInPicker = !!(newId && $("elVoice").querySelector('option[value="' + newId + '"]'));
+    if (newInPicker) $("elVoice").value = newId;
     syncSelectButton("elVoice");
     syncElDeleteBtn();
     $("elCloneName").value = ""; $("elCloneSample").value = "";
-    setMsg("statusMsg", "✅ အသံ အသစ် «" + (d.name || name) + "» ထည့်ပြီးပါပြီ။", "ok");
+    if (newInPicker){
+      setMsg("statusMsg", "✅ အသံ အသစ် «" + (d.name || name) + "» ထည့်ပြီးပါပြီ။", "ok");
+    } else {
+      setMsg("statusMsg", "အသံ ထည့်ပြီးပေမယ့် စာရင်းမှာ မတွေ့သေးပါ — 🔄 နဲ့ ပြန်ယူကြည့်ပါ။", "err");
+    }
   }catch(e){ handleGenError(e); }
   btn.disabled = false; btn.textContent = oldLabel;
 }
@@ -2691,6 +2734,11 @@ async function addElVoice(){
 async function deleteElVoice(){
   const vid = $("elVoice").value;
   if (!vid) return;
+  if (EL_PROTECTED_VOICE_IDS.includes(vid)){
+    setMsg("statusMsg", "ဒီ အသံ ကို ဖျက် မရပါ။", "err");
+    syncElDeleteBtn();
+    return;
+  }
   if (elProNotice()) return;
   if (!(await confirmUi("ဒီ အသံ ကို ဖျက်မှာ သေချာလား?"))) return;
   const btn = $("btnElDelete");
