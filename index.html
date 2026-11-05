@@ -80,6 +80,8 @@
   .hidden{display:none !important;}
   .muted{color:var(--muted);font-size:12.5px;line-height:1.6;}
   .msg{font-size:13px;margin-top:9px;min-height:18px;line-height:1.55;}
+  .errField{border-color:#f87171 !important;}
+  .fieldErr{flex:0 0 100%;width:100%;color:#f87171;font-size:12.5px;line-height:1.5;margin-top:6px;}
   .msg.err{color:var(--danger);} .msg.ok{color:var(--ok);} .msg.info{color:var(--muted);}
   .warn{background:rgba(255,207,77,.14);border:1px solid rgba(255,207,77,.5);color:var(--gold);
     border-radius:10px;padding:9px 11px;font-size:12.5px;margin-bottom:12px;line-height:1.55;}
@@ -135,6 +137,12 @@
   .recDot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#ff5252;margin-right:5px;animation:recPulse 1s ease-in-out infinite;}
   @keyframes recPulse{0%,100%{opacity:1}50%{opacity:.2}}
   button.recLive{border-color:#ff5252;color:#ff9d97;}
+  /* Trim editor sheet: waveform strip with the kept range bright */
+  .trimWave{display:flex;align-items:center;gap:2px;height:64px;background:rgba(0,0,0,.28);
+    border:1px solid var(--glass-border);border-radius:10px;padding:8px 6px;}
+  .trimWave span{flex:1 1 0;min-width:0;border-radius:2px;
+    background:linear-gradient(180deg,var(--accent),var(--accent2));}
+  .trimWave span.dim{opacity:.18;}
   .dlBtn{display:inline-block;margin-top:8px;color:var(--accent);font-size:13.5px;text-decoration:none;}
   /* Player extras: playback-speed cycle + loop toggle (result player) */
   .apSpeedBtn,.apLoopBtn{flex:0 0 auto;border:1px solid transparent;background:rgba(255,255,255,.10);
@@ -552,7 +560,7 @@
           <input type="text" id="elCloneName" placeholder="ဥပမာ — ကျွန်တော့် အသံ" autocomplete="off">
           <label>နမူနာ အသံဖိုင်</label>
           <input type="file" id="elCloneSample" accept="audio/*">
-          <div class="recRow"><button type="button" class="small" id="elCloneSampleRecBtn">🎤 အသံသွင်း</button><span class="recStat" id="elCloneSampleRecStat"></span></div>
+          <div class="recRow"><button type="button" class="small" id="elCloneSampleRecBtn">🎤 အသံသွင်း</button><button type="button" class="small" id="elCloneSampleTrimBtn" disabled>✂️ ဖြတ်</button><span class="recStat" id="elCloneSampleRecStat"></span></div>
           <div id="elCloneSamplePreview" class="uploadPreview hidden"></div>
           <div class="muted">နမူနာ အသံဖိုင် — ၁ မိနစ် ဝန်းကျင်, ရှင်းလင်းတဲ့ အသံ က ပိုကောင်း</div>
           <button id="btnElCloneAdd" type="button" class="primary" style="width:100%;margin-top:10px;">ထည့်မယ်</button>
@@ -612,7 +620,7 @@
       <div class="modePane hidden" id="pane-f5">
         <label>နမူနာ အသံဖိုင် (၅–၁၀ စက္ကန့် အသံကြည် ဖိုင်)</label>
         <input type="file" id="f5Ref" accept="audio/*">
-        <div class="recRow"><button type="button" class="small" id="f5RefRecBtn">🎤 အသံသွင်း</button><span class="recStat" id="f5RefRecStat"></span></div>
+        <div class="recRow"><button type="button" class="small" id="f5RefRecBtn">🎤 အသံသွင်း</button><button type="button" class="small" id="f5RefTrimBtn" disabled>✂️ ဖြတ်</button><span class="recStat" id="f5RefRecStat"></span></div>
         <div id="f5RefPreview" class="uploadPreview hidden"></div>
         <label>နမူနာ အသံထဲက စာသား (အတိအကျ)</label>
         <textarea id="f5RefText" style="min-height:48px;" placeholder="နမူနာ အသံထဲမှာ ပြောထားတဲ့ စာသား အတိအကျ ရေးပါ"></textarea>
@@ -636,7 +644,7 @@
         <div id="voxStatus" class="msg info">🔒 VoxCPM ကို admin က ပိတ်ထားပါတယ် — ဖွင့်ထားတဲ့ အချိန်မှ သုံးလို့ရပါမယ်</div>
         <label>နမူနာ အသံဖိုင် (clone လုပ်မယ့် အသံ)</label>
         <input type="file" id="voxRef" accept="audio/*">
-        <div class="recRow"><button type="button" class="small" id="voxRefRecBtn">🎤 အသံသွင်း</button><span class="recStat" id="voxRefRecStat"></span></div>
+        <div class="recRow"><button type="button" class="small" id="voxRefRecBtn">🎤 အသံသွင်း</button><button type="button" class="small" id="voxRefTrimBtn" disabled>✂️ ဖြတ်</button><span class="recStat" id="voxRefRecStat"></span></div>
         <div id="voxRefPreview" class="uploadPreview hidden"></div>
         <label>နမူနာ အသံထဲက စာသား (အတိအကျ)</label>
         <textarea id="voxRefText" style="min-height:48px;" placeholder="နမူနာ အသံထဲမှာ ပြောထားတဲ့ စာသား အတိအကျ ရေးပါ"></textarea>
@@ -787,6 +795,31 @@
       <button id="btnFixAuto" type="button">✨ အလိုအလျောက် ပြင်</button>
       <button id="btnFixSave" type="button" class="primary">💾 သိမ်းမယ်</button>
       <button type="button" class="small" data-clear="fixEditorText">🗑 ဖျက်</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRIM sheet (shared by the three audio-upload fields: cut a recorded
+     or picked file down to a chosen start–end range) -->
+<div id="sheetTrim" class="sheet" aria-hidden="true">
+  <div class="sheetHead"><span>✂️ အသံ ဖြတ်</span><button class="small" type="button" data-close-sheet>✕</button></div>
+  <div class="sheetBody">
+    <div id="trimWave" class="trimWave"></div>
+    <div class="sliderRow" style="margin-top:12px;">
+      <span style="flex:0 0 30px;font-size:13.5px;">စ</span>
+      <input type="range" id="trimStart" min="0" max="0" step="0.1" value="0">
+      <span class="sliderVal" id="trimStartVal">0:00</span>
+    </div>
+    <div class="sliderRow" style="margin-top:8px;">
+      <span style="flex:0 0 30px;font-size:13.5px;">ဆုံး</span>
+      <input type="range" id="trimEnd" min="0" max="0" step="0.1" value="0">
+      <span class="sliderVal" id="trimEndVal">0:00</span>
+    </div>
+    <div id="trimErr" class="msg err hidden" style="margin-top:8px;"></div>
+    <div class="row" style="margin-top:12px;">
+      <button id="btnTrimPlay" type="button">▶ ရွေးထားတဲ့ အပိုင်း နားထောင်</button>
+      <button id="btnTrimApply" type="button" class="primary">✂️ ဒီအပိုင်းပဲ ယူမယ်</button>
+      <button id="btnTrimClose" type="button">ပိတ်</button>
     </div>
   </div>
 </div>
@@ -1187,6 +1220,61 @@ function setMsg(id, text, cls){
     const pop = $("loadPopMsg");
     if (pop) pop.textContent = text || "";
   }
+}
+/* ---------------- instructive field errors ----------------
+   Standing rule: when an action's prerequisites are incomplete, the
+   error says WHAT is missing and WHAT to do — never a silent no-op,
+   never a generic combined message. markErr gives the field a red
+   border, puts an inline line with the message right under it, mirrors
+   the message to the pane's status line, and scrolls the field into
+   view. Every check runs at the TOP of its handler, BEFORE any network
+   call. Typing/selecting in the field clears the mark (initFieldErrs). */
+function errVisual(el){
+  /* Hidden <select>s are driven by a visible .pickBtn proxy — mark and
+     scroll to the proxy so the user actually sees the highlight. */
+  if (el && el.tagName === "SELECT"){ const b = $(el.id + "Btn"); if (b) return b; }
+  return el;
+}
+function fieldErrLine(el){
+  if (el.__fieldErr) return el.__fieldErr;
+  const vis = errVisual(el);
+  if (!vis || !vis.parentNode) return null;
+  const line = document.createElement("div");
+  line.className = "fieldErr hidden";
+  line.setAttribute("role", "alert");
+  vis.parentNode.insertBefore(line, vis.nextSibling);
+  el.__fieldErr = line;
+  return line;
+}
+function markErr(el, msg, msgId){
+  if (el){
+    el.classList.add("errField");
+    const vis = errVisual(el);
+    if (vis && vis !== el) vis.classList.add("errField");
+    const line = fieldErrLine(el);
+    if (line){ line.textContent = msg; line.classList.remove("hidden"); }
+    if (vis && typeof vis.scrollIntoView === "function"){
+      try{ vis.scrollIntoView({ block:"center", behavior:"smooth" }); }catch(e){}
+    }
+  }
+  setMsg(msgId || "statusMsg", msg, "err");
+}
+function clearErr(el){
+  if (!el) return;
+  el.classList.remove("errField");
+  const vis = errVisual(el);
+  if (vis && vis !== el) vis.classList.remove("errField");
+  if (el.__fieldErr) el.__fieldErr.classList.add("hidden");
+}
+function initFieldErrs(){
+  ["edgeText","elText","elVoice","gemText","spk1Name","spk2Name",
+   "f5Text","f5Ref","f5RefText","voxText","voxRef",
+   "elCloneName","elCloneSample","authEmail","authPass"].forEach(id=>{
+    const el = $(id); if (!el) return;
+    const clear = ()=>clearErr(el);
+    el.addEventListener("input", clear);
+    el.addEventListener("change", clear);
+  });
 }
 let genBtnBusy = false;
 let loadingActive = false;
@@ -1931,6 +2019,231 @@ function attachRecorder(inputId){
 }
 window.addEventListener("pagehide", ()=>{ if (_activeRec) _activeRec.kill(); });
 
+/* ---------------- audio trim editor (shared bottom sheet) ----------------
+   One sheet serves all three upload fields (EL clone sample, F5 ref,
+   Vox ref): the "✂️ ဖြတ်" button beside each recorder row opens it for
+   that field's current file. The file is decoded once at open (peaks +
+   duration), the user drags စ/ဆုံး sliders (kept range stays bright on
+   the waveform, minimum kept length 1 s), can preview just the range,
+   and Apply slices the decoded samples, re-encodes with the shared
+   encodeWav at the source sample rate (mono downmix) and injects the
+   result via setInputFile — so the preview player and every submit
+   flow see the trimmed file exactly like a fresh pick. The original
+   file is only replaced after the new one is built successfully. */
+const trimState = { inputId:null, file:null, buffer:null, peaks:null, bars:[],
+                    start:0, end:0, audio:null, url:null, urlFor:null };
+const TRIM_MAX_BYTES = 25 * 1024 * 1024;
+const TRIM_MAX_SECS = 600;
+function trimDur(){
+  const b = trimState.buffer;
+  return b ? (b.duration || (b.length / b.sampleRate)) : 0;
+}
+/* Same peak computation as the players' fetchPeaks, but from an
+   already-decoded buffer instead of a URL. */
+function peaksFromBuffer(buf){
+  const chans = [];
+  for (let c = 0; c < buf.numberOfChannels; c++) chans.push(buf.getChannelData(c));
+  const len = chans[0].length;
+  const peaks = new Float32Array(WAVE_BARS);
+  const per = Math.max(1, Math.floor(len / WAVE_BARS));
+  const stride = Math.max(1, Math.floor(per / 96));
+  for (let i = 0; i < WAVE_BARS; i++){
+    let mx = 0;
+    const start = i * per, end = Math.min(len, start + per);
+    for (let j = start; j < end; j += stride){
+      for (let c = 0; c < chans.length; c++){
+        const v = Math.abs(chans[c][j]);
+        if (v > mx) mx = v;
+      }
+    }
+    peaks[i] = mx;
+  }
+  let g = 0;
+  for (let i = 0; i < WAVE_BARS; i++) if (peaks[i] > g) g = peaks[i];
+  if (g > 0) for (let i = 0; i < WAVE_BARS; i++) peaks[i] = Math.max(0.08, peaks[i] / g);
+  return peaks;
+}
+/* Trim-button enable rule: a file must be attached; the Vox button
+   also stays off while its pane is off (no live session). */
+function trimBtnDisabled(inputId){
+  const input = $(inputId);
+  if (!input || !(input.files && input.files[0])) return true;
+  if (inputId === "voxRef"){
+    const pane = $("pane-vox");
+    if (pane && pane.classList.contains("paneOff")) return true;
+  }
+  return false;
+}
+function attachTrim(inputId){
+  const input = $(inputId), btn = $(inputId + "TrimBtn");
+  if (!input || !btn) return;
+  const sync = ()=>{ btn.disabled = trimBtnDisabled(inputId); };
+  input.addEventListener("change", sync);
+  btn.addEventListener("click", ()=> openTrim(inputId));
+  sync();
+}
+function paintTrim(){
+  const st = trimState, dur = trimDur();
+  $("trimStartVal").textContent = fmtPlayerTime(st.start);
+  $("trimEndVal").textContent = fmtPlayerTime(st.end);
+  st.bars.forEach((b, i)=>{
+    const t0 = i * dur / WAVE_BARS, t1 = (i + 1) * dur / WAVE_BARS;
+    b.classList.toggle("dim", !(t1 > st.start && t0 < st.end));
+  });
+}
+function stopTrimPlay(){
+  const a = trimState.audio;
+  if (a){ try{ a.pause(); }catch(e){} }
+}
+async function openTrim(inputId){
+  const input = $(inputId);
+  const file = input && input.files && input.files[0];
+  if (!file) return;
+  if (file.size > TRIM_MAX_BYTES){
+    setMsg("statusMsg", "✂️ ဖိုင် ကြီးလွန်းပါတယ် (25 MB ကျော်နေတယ်) — ဖြတ်လို့ မရပါ။", "err");
+    return;
+  }
+  opBusy(true, "⏳ အသံဖိုင် ဖတ်နေပါတယ်…");
+  let buf = null;
+  try{
+    const raw = await file.arrayBuffer();
+    const ctx = audioCtx();
+    try{ buf = await ctx.decodeAudioData(raw.slice(0)); }
+    finally{ if (ctx.close){ try{ ctx.close(); }catch(e){} } }
+  }catch(e){ buf = null; }
+  opBusy(false);
+  if (!buf){
+    setMsg("statusMsg", "✂️ အသံဖိုင် ဖတ်လို့ မရပါ — တခြား ဖိုင် နဲ့ ပြန် စမ်းပါ။", "err");
+    return;
+  }
+  const dur = buf.duration || (buf.length / buf.sampleRate);
+  if (dur > TRIM_MAX_SECS){
+    setMsg("statusMsg", "✂️ အသံ ကြာချိန် ၁၀ မိနစ် ထက် ရှည်လွန်းပါတယ် — ဖြတ်လို့ မရပါ။", "err");
+    return;
+  }
+  if (!(dur > 1)){
+    setMsg("statusMsg", "✂️ အသံ တိုလွန်းပါတယ် — ဖြတ်ဖို့ အနည်းဆုံး ၁ စက္ကန့် ကျော် လိုပါတယ်။", "err");
+    return;
+  }
+  stopTrimPlay();
+  trimState.inputId = inputId;
+  trimState.file = file;
+  trimState.buffer = buf;
+  trimState.peaks = peaksFromBuffer(buf);
+  trimState.start = 0;
+  trimState.end = Math.round(dur * 10) / 10;
+  const wave = $("trimWave");
+  wave.innerHTML = "";
+  trimState.bars = [];
+  for (let i = 0; i < WAVE_BARS; i++){
+    const s = document.createElement("span");
+    s.style.height = Math.round(12 + trimState.peaks[i] * 88) + "%";
+    wave.appendChild(s);
+    trimState.bars.push(s);
+  }
+  const sEl = $("trimStart"), eEl = $("trimEnd");
+  sEl.min = "0"; sEl.max = String(trimState.end); sEl.value = "0";
+  eEl.min = "0"; eEl.max = String(trimState.end); eEl.value = String(trimState.end);
+  const err = $("trimErr");
+  err.textContent = ""; err.classList.add("hidden");
+  paintTrim();
+  openSheetEl($("sheetTrim"));
+}
+function playTrimRange(){
+  const st = trimState;
+  if (!st.file) return;
+  if (!st.audio){
+    st.audio = document.createElement("audio");
+    st.audio.addEventListener("timeupdate", ()=>{
+      const a = st.audio;
+      if (!a) return;
+      /* Stop at the range end; also stop if the sheet was closed
+         meanwhile (✕ / backdrop go through the generic close). */
+      if (!$("sheetTrim").classList.contains("open") || a.currentTime >= st.end){
+        try{ a.pause(); }catch(e){}
+      }
+    });
+  }
+  if (st.urlFor !== st.file){
+    if (st.url){ try{ URL.revokeObjectURL(st.url); }catch(e){} st.url = null; }
+    st.url = URL.createObjectURL(st.file);
+    st.urlFor = st.file;
+    st.audio.src = st.url;
+  }
+  try{ st.audio.currentTime = st.start; }catch(e){}
+  try{
+    const p = st.audio.play();
+    if (p && p.catch) p.catch(()=>{});
+  }catch(e){}
+}
+async function applyTrim(){
+  const st = trimState;
+  if (!st.buffer || !st.inputId) return;
+  const input = $(st.inputId);
+  if (!input) return;
+  const err = $("trimErr");
+  err.textContent = ""; err.classList.add("hidden");
+  opBusy(true, "⏳ ဖြတ်နေပါတယ်…");
+  let newSecs = 0, ok = false;
+  try{
+    const buf = st.buffer, sr = buf.sampleRate;
+    const s0 = Math.max(0, Math.floor(st.start * sr));
+    const s1 = Math.min(buf.length, Math.floor(st.end * sr));
+    const len = Math.max(1, s1 - s0);
+    const nCh = buf.numberOfChannels, chans = [];
+    for (let c = 0; c < nCh; c++) chans.push(buf.getChannelData(c));
+    const out = new Float32Array(len);
+    for (let i = 0; i < len; i++){
+      let s = 0;
+      for (let c = 0; c < nCh; c++) s += chans[c][s0 + i];
+      out[i] = s / nCh;
+    }
+    const wavBuf = { numberOfChannels:1, sampleRate:sr, length:len, getChannelData:()=>out };
+    const file = new File([encodeWav(wavBuf)], "trimmed.wav", { type:"audio/wav" });
+    newSecs = len / sr;
+    ok = setInputFile(input, file);
+    if (ok) input.dispatchEvent(new Event("change", { bubbles:true }));
+  }catch(e){ ok = false; }
+  opBusy(false);
+  if (!ok){
+    err.textContent = "✂️ ဖြတ်လို့ မရပါ — ပြန် စမ်းပါ။ (မူလ ဖိုင် ဒီအတိုင်း ရှိပါသေးတယ်)";
+    err.classList.remove("hidden");
+    return;
+  }
+  /* If the recorder row still shows its "recorded take" label, refresh
+     it to the trimmed length. */
+  const stat = $(st.inputId + "RecStat");
+  if (stat && stat.textContent.indexOf("🎤 သွင်းထားတဲ့ အသံ") === 0){
+    stat.textContent = "🎤 သွင်းထားတဲ့ အသံ (" + fmtPlayerTime(newSecs) + ")";
+  }
+  stopTrimPlay();
+  closeSheets();
+  setMsg("statusMsg", "✂️ ဖြတ်ပြီးပါပြီ — အသစ် ကြာချိန် " + fmtPlayerTime(newSecs), "ok");
+}
+function initTrim(){
+  const sEl = $("trimStart"), eEl = $("trimEnd");
+  if (!sEl || !eEl) return;
+  const r1 = v => Math.round(v * 10) / 10;
+  sEl.addEventListener("input", ()=>{
+    let v = parseFloat(sEl.value) || 0;
+    const maxStart = trimState.end - 1;
+    if (v > maxStart){ v = Math.max(0, r1(maxStart)); sEl.value = String(v); }
+    trimState.start = r1(v);
+    paintTrim();
+  });
+  eEl.addEventListener("input", ()=>{
+    let v = parseFloat(eEl.value) || 0;
+    const minEnd = trimState.start + 1, dur = trimDur();
+    if (v < minEnd){ v = r1(minEnd); eEl.value = String(v); }
+    if (v > dur){ v = r1(dur); eEl.value = String(v); }
+    trimState.end = r1(v);
+    paintTrim();
+  });
+  $("btnTrimPlay").addEventListener("click", playTrimRange);
+  $("btnTrimApply").addEventListener("click", applyTrim);
+  $("btnTrimClose").addEventListener("click", ()=>{ stopTrimPlay(); closeSheets(); });
+}
+
 /* ---------------- landing sample players ----------------
    Static files beside index.html; plain <audio> elements with
    preload="none", so nothing downloads (and no login is needed)
@@ -2066,6 +2379,8 @@ function renderVoxStatus(){
   if (voxRecBtn) voxRecBtn.disabled = !usable;
   const pane = $("pane-vox");
   if (pane) pane.classList.toggle("paneOff", !usable);
+  const voxTrimBtn = $("voxRefTrimBtn");
+  if (voxTrimBtn) voxTrimBtn.disabled = trimBtnDisabled("voxRef");
 }
 /* Like apiFetch, but a 503 response is returned (not turned into a WakeError)
    so the vox routes' own {"detail": "..."} (e.g. session not available) shows. */
@@ -2100,6 +2415,11 @@ async function loadVoxStatus(){
   refreshProLocks();
 }
 async function saveKeys(){
+  /* Nothing entered anywhere → say so in the sheet and never call
+     Supabase with an all-empty save. */
+  const keyFields = ["keyEl","keyGemini","keyHf","keyPro"].map(id => $(id)).filter(Boolean);
+  if (keyFields.length && keyFields.every(f => !f.value.trim()))
+    return setMsg("profileMsg", "သိမ်းဖို့ Key (သို့) Pro Code တစ်ခု ထည့်ပေးပါ။", "err");
   if (!sb || !session) return;
   keys = {
     el_key: $("keyEl").value.trim(), gemini_key: $("keyGemini").value.trim(),
@@ -2614,7 +2934,7 @@ async function stitchChunkBlobs(blobs){
 async function genEdge(){
   if (disabledModes.includes("edge")) return setMsg("statusMsg", "⛔ ဒီ TTS ကို admin က ပိတ်ထားပါတယ်။", "err");
   const text = $("edgeText").value.trim();
-  if (!text) return setMsg("statusMsg", "စာသား အရင် ရေးပါ။", "err");
+  if (!text) return markErr($("edgeText"), "စာသား အရင် ရေးပေးပါ။");
   /* Prosody state: set exactly by the preset chips, or recomputed
      from the sliders when they are moved by hand (see the Edge
      prosody preset chips block). Payload strings unchanged. */
@@ -2655,8 +2975,8 @@ async function genEl(){
   if (disabledModes.includes("el")) return setMsg("statusMsg", "⛔ ဒီ TTS ကို admin က ပိတ်ထားပါတယ်။", "err");
   if (!proUnlocked("el")) return setMsg("statusMsg", PRO_LOCKED_TEXT, "err");
   const text = $("elText").value.trim();
-  if (!text) return setMsg("statusMsg", "စာသား အရင် ရေးပါ။", "err");
-  if (!$("elVoice").value) return setMsg("statusMsg", "အသံ အရင် ရွေးပါ။", "err");
+  if (!text) return markErr($("elText"), "စာသား အရင် ရေးပေးပါ။");
+  if (!$("elVoice").value) return markErr($("elVoice"), "အသံ မရွေးရသေးပါ — အသံ စာရင်း အရင် ယူပေးပါ။");
   busy(true); showWake(false);
   try{
     const voice_id = $("elVoice").value;
@@ -2903,8 +3223,12 @@ async function addElVoice(){
   if (elProNotice()) return;
   const name = $("elCloneName").value.trim();
   const file = $("elCloneSample").files[0];
-  if (!name) return setMsg("statusMsg", "အသံ နာမည် အရင် ရေးပါ။", "err");
-  if (!file) return setMsg("statusMsg", "နမူနာ အသံဖိုင် အရင် ရွေးပါ။", "err");
+  if (!name){
+    markErr($("elCloneName"), "အသံ နာမည် အရင် ရေးပေးပါ။");
+    try{ $("elCloneName").focus(); }catch(e){}
+    return;
+  }
+  if (!file) return markErr($("elCloneSample"), "နမူနာ အသံဖိုင် အရင် ရွေးပေးပါ (သို့) 🎤 အသံသွင်း ပေးပါ။");
   const btn = $("btnElCloneAdd");
   const oldLabel = btn.textContent;
   btn.disabled = true; btn.textContent = "ထည့်နေပါတယ်...";
@@ -2979,7 +3303,20 @@ async function genGemini(){
   if (disabledModes.includes("gemini")) return setMsg("statusMsg", "⛔ ဒီ TTS ကို admin က ပိတ်ထားပါတယ်။", "err");
   if (!proUnlocked("gemini")) return setMsg("statusMsg", PRO_LOCKED_TEXT, "err");
   const text = $("gemText").value.trim();
-  if (!text) return setMsg("statusMsg", "စာသား အရင် ရေးပါ။", "err");
+  if (!text) return markErr($("gemText"), "စာသား အရင် ရေးပေးပါ။");
+  if ($("gemDuo").checked){
+    /* Dialogue prerequisites, checked before any network call: both
+       speaker names present, and each name owns at least one line —
+       a line belongs to a speaker when it starts with the exact
+       "Name:" prefix (the same rule the server applies). */
+    const n1 = $("spk1Name").value.trim(), n2 = $("spk2Name").value.trim();
+    if (!n1) return markErr($("spk1Name"), "ပြောသူ နာမည် ၂ ခု လုံး ရေးပေးပါ။");
+    if (!n2) return markErr($("spk2Name"), "ပြောသူ နာမည် ၂ ခု လုံး ရေးပေးပါ။");
+    const lines = text.split("\n");
+    const hasLine = nm => lines.some(l => l.startsWith(nm + ":"));
+    if (!hasLine(n1)) return markErr($("gemText"), "«" + n1 + "» အတွက် စာကြောင်း မရှိပါ — စာထဲမှာ '" + n1 + ":' နဲ့ စတဲ့ ကြောင်း ထည့်ပေးပါ။");
+    if (!hasLine(n2)) return markErr($("gemText"), "«" + n2 + "» အတွက် စာကြောင်း မရှိပါ — စာထဲမှာ '" + n2 + ":' နဲ့ စတဲ့ ကြောင်း ထည့်ပေးပါ။");
+  }
   busy(true); showWake(false);
   try{
     const makeBody = (t)=>{
@@ -3060,9 +3397,9 @@ async function genF5(){
   const text = $("f5Text").value.trim();
   const refText = $("f5RefText").value.trim();
   const file = $("f5Ref").files[0];
-  if (!file) return setMsg("statusMsg", "နမူနာ အသံဖိုင် အရင် ရွေးပါ။", "err");
-  if (!refText) return setMsg("statusMsg", "နမူနာ အသံထဲက စာသား ရေးပါ။", "err");
-  if (!text) return setMsg("statusMsg", "ပြောမယ့် စာသား အသစ် ရေးပါ။", "err");
+  if (!text) return markErr($("f5Text"), "စာသား အရင် ရေးပေးပါ။");
+  if (!file) return markErr($("f5Ref"), "နမူနာ အသံဖိုင် အရင် ရွေးပေးပါ (သို့) 🎤 အသံသွင်း ပေးပါ။");
+  if (!refText) return markErr($("f5RefText"), "နမူနာ အသံထဲက စာသား ကို ရေးပေးပါ။");
   if (text.length > F5_CHUNK_MAX){
     /* Long text: F5 is only reliable to ~300 chars per run, so split at
        sentence boundaries into <=260-char chunks, run one clone job per
@@ -3124,9 +3461,10 @@ async function genVox(){
   const text = $("voxText").value.trim();
   const refText = $("voxRefText").value.trim();
   const file = $("voxRef").files[0];
-  if (!file) return setMsg("statusMsg", "နမူနာ အသံဖိုင် အရင် ရွေးပါ။", "err");
-  if (!refText) return setMsg("statusMsg", "နမူနာ အသံထဲက စာသား ရေးပါ။", "err");
-  if (!text) return setMsg("statusMsg", "ပြောမယ့် စာသား ရေးပါ။", "err");
+  /* voxRefText stays optional (the backend defaults it) — only the
+     text itself and the reference file are hard prerequisites. */
+  if (!text) return markErr($("voxText"), "စာသား အရင် ရေးပေးပါ။");
+  if (!file) return markErr($("voxRef"), "နမူနာ အသံဖိုင် အရင် ရွေးပေးပါ (သို့) 🎤 အသံသွင်း ပေးပါ။");
   /* Long text: one /tts call per <=300-char chunk, stitched into one WAV. */
   let chunks = null;
   if (text.length > VOX_CHUNK_MAX){
@@ -3175,22 +3513,34 @@ function generate(){
 }
 
 /* ---------------- auth ---------------- */
+/* Common Supabase auth errors, in Burmese. Unknown errors keep the
+   existing prefixed raw display. */
+function authErrText(error, prefix){
+  const m = ((error && error.message) || "").toLowerCase();
+  if (m.includes("invalid login credentials")) return "အီးမေးလ် (သို့) စကားဝှက် မှားနေပါတယ်။";
+  if (m.includes("email not confirmed")) return "အီးမေးလ် အတည်ပြု မပြီးသေးပါ — inbox ထဲက link ကို အရင် နှိပ်ပေးပါ။";
+  if (m.includes("already registered") || m.includes("already been registered"))
+    return "ဒီ အီးမေးလ် နဲ့ အကောင့် ရှိပြီးသားပါ — Login ဝင် ကြည့်ပါ။";
+  return prefix + ((error && error.message) || "");
+}
 async function signIn(){
-  if (!sb) return setMsg("authMsg", "Supabase မချိတ်ရသေးပါ။", "err");
   const email = $("authEmail").value.trim(), pass = $("authPass").value;
-  if (!email || !pass) return setMsg("authMsg", "Email နှင့် Password ထည့်ပါ။", "err");
+  if (!email) return markErr($("authEmail"), "အီးမေးလ် ရေးပေးပါ။", "authMsg");
+  if (!pass) return markErr($("authPass"), "စကားဝှက် ရေးပေးပါ။", "authMsg");
+  if (!sb) return setMsg("authMsg", "Supabase မချိတ်ရသေးပါ။", "err");
   setMsg("authMsg", "ဝင်နေပါတယ်...", "info");
   const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-  if (error) setMsg("authMsg", "ဝင်မရပါ: " + error.message, "err");
+  if (error) setMsg("authMsg", authErrText(error, "ဝင်မရပါ: "), "err");
 }
 async function signUp(){
-  if (!sb) return setMsg("authMsg", "Supabase မချိတ်ရသေးပါ။", "err");
   const email = $("authEmail").value.trim(), pass = $("authPass").value;
-  if (!email || !pass) return setMsg("authMsg", "Email နှင့် Password ထည့်ပါ။", "err");
-  if (pass.length < 6) return setMsg("authMsg", "Password အနည်းဆုံး ၆ လုံး ရှိရပါမယ်။", "err");
+  if (!email) return markErr($("authEmail"), "အီးမေးလ် ရေးပေးပါ။", "authMsg");
+  if (!pass) return markErr($("authPass"), "စကားဝှက် ရေးပေးပါ။", "authMsg");
+  if (pass.length < 6) return markErr($("authPass"), "စကားဝှက် အနည်းဆုံး ၆ လုံး ထားပေးပါ။", "authMsg");
+  if (!sb) return setMsg("authMsg", "Supabase မချိတ်ရသေးပါ။", "err");
   setMsg("authMsg", "အကောင့် ဖွင့်နေပါတယ်...", "info");
   const { data, error } = await sb.auth.signUp({ email, password: pass });
-  if (error) return setMsg("authMsg", "ဖွင့်မရပါ: " + error.message, "err");
+  if (error) return setMsg("authMsg", authErrText(error, "ဖွင့်မရပါ: "), "err");
   if (data && data.session) setMsg("authMsg", "✅ အကောင့် ဖွင့်ပြီး ဝင်ပြီးပါပြီ။", "ok");
   else setMsg("authMsg", "✅ အကောင့် ဖွင့်ပြီးပါပြီ။ Email ထဲက confirmation link ကို နှိပ်ပြီးမှ ဝင်ပါ။", "ok");
 }
@@ -3198,13 +3548,13 @@ async function signUp(){
    PASSWORD_RECOVERY auth event (see the auth wiring), which reveals the
    new-password form on this same card. */
 async function forgotPassword(){
-  if (!sb) return setMsg("authMsg", "Supabase မချိတ်ရသေးပါ။", "err");
   const email = $("authEmail").value.trim();
   if (!email){
-    setMsg("authMsg", "Password ပြန် သတ်မှတ်ဖို့ Email အရင် ထည့်ပါ။", "err");
+    markErr($("authEmail"), "အီးမေးလ် ရေးပေးပါ။", "authMsg");
     try{ $("authEmail").focus(); }catch(e){}
     return;
   }
+  if (!sb) return setMsg("authMsg", "Supabase မချိတ်ရသေးပါ။", "err");
   setMsg("authMsg", "Email ပို့နေပါတယ်...", "info");
   const { error } = await sb.auth.resetPasswordForEmail(email, {
     redirectTo: "https://ubaaye.github.io/burmese-voice-tts-app/"
@@ -3479,6 +3829,11 @@ function init(){
   attachRecorder("elCloneSample");
   attachRecorder("f5Ref");
   attachRecorder("voxRef");
+  attachTrim("elCloneSample");
+  attachTrim("f5Ref");
+  attachTrim("voxRef");
+  initTrim();
+  initFieldErrs();
   fillGeminiVoices();
   initGemStyleChips();
   initElStyleChips();
