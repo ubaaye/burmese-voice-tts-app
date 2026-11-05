@@ -120,6 +120,11 @@
   .apWave{flex:1;min-width:0;height:36px;display:flex;align-items:center;gap:2px;cursor:pointer;padding:0 2px;touch-action:manipulation;}
   .apBar{flex:1 1 0;min-width:2px;border-radius:2px;background:rgba(255,255,255,.22);height:20%;pointer-events:none;}
   .apBar.on{background:linear-gradient(180deg,var(--accent),var(--accent2));}
+  /* While audio plays, the waveform bars dance (transform only — the
+     per-bar peak heights and .on progress colouring are untouched).
+     Each bar's delay/duration are set inline in makePlayer. */
+  .apWave.playing .apBar{animation:apDance .85s ease-in-out infinite alternate;transform-origin:center;}
+  @keyframes apDance{from{transform:scaleY(.5)}to{transform:scaleY(1.3)}}
   .audioPlayer.compact .apWave{height:28px;}
   .apTime{font-size:12px;color:var(--muted);white-space:nowrap;min-width:74px;text-align:right;font-variant-numeric:tabular-nums;}
   .audioPlayer.compact .apTime{min-width:66px;font-size:11.5px;}
@@ -131,8 +136,10 @@
   .apLoopBtn.on{background:rgba(77,163,255,.35);border-color:var(--accent);}
   .audioPlayer.compact .apSpeedBtn,.audioPlayer.compact .apLoopBtn{min-width:30px;padding:4px 5px;}
   /* Player controls row (speed + loop) — sits BELOW the waveform, never on it */
-  .apCtl{display:flex;justify-content:flex-end;gap:6px;margin-top:6px;}
+  .apCtl{display:flex;align-items:center;gap:6px;margin-top:6px;}
   .audioPlayer.compact .apCtl{margin-top:4px;}
+  .apCtl .apTime{margin-right:auto;text-align:left;min-width:0;}
+  .audioPlayer.compact .apCtl .apTime{min-width:0;}
   /* Generation history (IndexedDB-backed) */
   .histRow{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:12px;
     padding:10px 12px;margin-top:10px;}
@@ -189,6 +196,9 @@
     background:linear-gradient(180deg,var(--accent),var(--accent2));
     animation:waveEq 1.05s ease-in-out infinite;}
   .loadPopMsg{font-size:13.5px;line-height:1.55;color:var(--txt);margin-top:12px;min-height:21px;}
+  #btnCancelGen{margin-top:12px;}
+  /* Custom confirm sheet: danger action button */
+  .btnDanger{background:rgba(255,107,107,.16);border-color:rgba(255,107,107,.65);color:#ffb3b3;font-weight:700;}
   @keyframes waveEq{0%,100%{height:6px}50%{height:24px}}
   /* Copy/selection lockdown — app-like: UI text can't be selected/copied.
      Form fields keep normal text behaviour so keys/text can still be pasted. */
@@ -638,6 +648,7 @@
   <div class="loadPopCard">
     <div class="loadWave" aria-hidden="true"><span style="animation-delay:-.95s"></span><span style="animation-delay:-.42s;animation-duration:1.2s"></span><span style="animation-delay:-.78s"></span><span style="animation-delay:-.15s;animation-duration:.9s"></span><span style="animation-delay:-.63s"></span><span style="animation-delay:-.30s;animation-duration:1.15s"></span><span style="animation-delay:-.88s"></span><span style="animation-delay:-.05s;animation-duration:.95s"></span><span style="animation-delay:-.55s"></span><span style="animation-delay:-.72s;animation-duration:1.25s"></span><span style="animation-delay:-.20s"></span><span style="animation-delay:-.48s;animation-duration:.9s"></span><span style="animation-delay:-.98s"></span><span style="animation-delay:-.35s;animation-duration:1.1s"></span><span style="animation-delay:-.68s"></span><span style="animation-delay:-.10s;animation-duration:.85s"></span><span style="animation-delay:-.82s"></span><span style="animation-delay:-.52s;animation-duration:1.2s"></span><span style="animation-delay:-.25s"></span><span style="animation-delay:-.60s;animation-duration:.95s"></span><span style="animation-delay:-.90s"></span><span style="animation-delay:-.40s;animation-duration:1.15s"></span><span style="animation-delay:-.75s"></span><span style="animation-delay:-.18s;animation-duration:.9s"></span></div>
     <div id="loadPopMsg" class="loadPopMsg">⏳ အသံ ထုတ်နေပါတယ် — ခဏ စောင့်ပါ…</div>
+    <button id="btnCancelGen" type="button">⛔ ရပ်မယ်</button>
   </div>
 </div>
 
@@ -745,6 +756,18 @@
   </div>
 </div>
 
+<!-- CONFIRM sheet (custom in-app replacement for the native confirm dialog) -->
+<div id="sheetConfirm" class="sheet" aria-hidden="true">
+  <div class="sheetHead"><span>⚠️ သေချာလား</span><button class="small" type="button" data-close-sheet>✕</button></div>
+  <div class="sheetBody">
+    <p id="confirmMsg" style="font-size:14.5px;line-height:1.65;margin:2px 0 4px;"></p>
+    <div class="row" style="margin-top:12px;">
+      <button id="btnConfirmNo" type="button">မဖျက်တော့ဘူး</button>
+      <button id="btnConfirmYes" type="button" class="btnDanger">ဖျက်မယ်</button>
+    </div>
+  </div>
+</div>
+
 <!-- GENERIC PICKER sheet (engine / voice selection) -->
 <div id="sheet" class="sheet" aria-hidden="true">
   <div class="sheetHead"><span id="sheetTitle"></span><button id="sheetClose" class="small" type="button">✕</button></div>
@@ -824,12 +847,22 @@ function setMsg(id, text, cls){
 }
 let genBtnBusy = false;
 let loadingActive = false;
+/* AbortController for the running generation (⛔ cancel button in the
+   loading pop-up). Armed in busy(true), disarmed in busy(false) — see
+   busy(): it is used ONLY by the five generation flows. */
+let genCtl = null;
 /* In-button waveform bars: [animation-delay, animation-duration] pairs,
    mirroring the centered pop-up wave's pattern at button size. */
 const BTN_WAVE = [["-.95s",""],["-.42s","1.2s"],["-.78s",""],["-.15s",".9s"],
   ["-.63s",""],["-.30s","1.15s"],["-.88s",""],["-.05s",".95s"],
   ["-.55s",""],["-.72s","1.25s"],["-.20s",""],["-.48s",".9s"]];
 function busy(on, label){
+  /* Generation choke point: every busy(true)/busy(false) call site lives
+     inside the five gen* flows, so busy(true) = a generation starting
+     (arm a fresh AbortController) and busy(false) = it ending (disarm,
+     so a stale controller never leaks into the next run). */
+  if (on && !genCtl){ try{ genCtl = new AbortController(); }catch(e){ genCtl = null; } }
+  if (!on) genCtl = null;
   const b=$("btnGenerate"); b.disabled=on;
   if (on && !genBtnBusy){
     /* Button itself becomes the waveform loader (+ short label);
@@ -1056,13 +1089,27 @@ async function authHeader(){
   const tok = data && data.session ? data.session.access_token : (session ? session.access_token : "");
   return tok ? { "Authorization": "Bearer " + tok } : {};
 }
+/* True when an error means "the user cancelled this generation" — the
+   fetch rejected with AbortError, or the generation controller is
+   aborted. Checked before the WakeError wrapping so a cancel is never
+   misreported as a sleeping server. */
+function isGenAbort(e){
+  return !!((e && e.name === "AbortError") || (genCtl && genCtl.signal.aborted));
+}
+/* Chunk/poll loops call this each iteration so a cancel lands promptly
+   even while no fetch is in flight (decoding, poll sleeps). */
+function throwIfGenAborted(){
+  if (genCtl && genCtl.signal.aborted) throw new DOMException("Generation cancelled", "AbortError");
+}
 async function apiFetch(path, opts){
   opts = opts || {};
   const headers = Object.assign({}, opts.headers||{}, await authHeader());
+  const fopts = Object.assign({}, opts, { headers });
+  if (!fopts.signal && genCtl) fopts.signal = genCtl.signal;
   let resp;
   try{
-    resp = await fetch(PUBLIC_API + path, Object.assign({}, opts, { headers }));
-  }catch(e){ throw new WakeError("network"); }
+    resp = await fetch(PUBLIC_API + path, fopts);
+  }catch(e){ if (isGenAbort(e)) throw e; throw new WakeError("network"); }
   if (resp.status === 502 || resp.status === 503) throw new WakeError("http "+resp.status);
   if (resp.status === 401) handleSessionDead();
   return resp;
@@ -1231,6 +1278,11 @@ function makePlayer(audio, mount, opts){
   for (let i = 0; i < WAVE_BARS; i++){
     const b = document.createElement("span");
     b.className = "apBar";
+    /* Deterministic per-bar dance timing for the .playing animation
+       (the .apWave.playing CSS supplies name/timing/direction; these
+       inline delay/duration values override its defaults per bar). */
+    b.style.animationDelay = (((i * 37) % 9) * 0.09).toFixed(2) + "s";
+    b.style.animationDuration = (0.7 + ((i * 53) % 5) * 0.1).toFixed(2) + "s";
     wave.appendChild(b);
     bars.push(b);
   }
@@ -1248,9 +1300,10 @@ function makePlayer(audio, mount, opts){
     try{ audio.playbackRate = r; }catch(e){}
     spdBtn.textContent = (r === 1 ? "1" : String(r)) + "×";
   });
-  ui.appendChild(btn); ui.appendChild(wave); ui.appendChild(time);
+  ui.appendChild(btn); ui.appendChild(wave);
   /* Speed + loop live in their own row under the waveform — never on top of it. */
   const ctl = document.createElement("div"); ctl.className = "apCtl";
+  ctl.appendChild(time);
   ctl.appendChild(spdBtn);
   /* Loop toggle — result player only (opts.loop). */
   if (opts.loop){
@@ -1277,6 +1330,7 @@ function makePlayer(audio, mount, opts){
     const hasDur = isFinite(dur) && dur > 0;
     const played = hasDur ? Math.round(Math.min(cur, dur) / dur * WAVE_BARS) : 0;
     for (let i = 0; i < WAVE_BARS; i++) bars[i].classList.toggle("on", i < played);
+    wave.classList.toggle("playing", !audio.paused && !audio.ended);
     time.textContent = fmtPlayerTime(cur) + " / " + fmtPlayerTime(dur);
     btn.textContent = audio.paused ? "▶" : "⏸";
   };
@@ -1503,10 +1557,12 @@ function renderVoxStatus(){
 async function voxFetch(path, opts){
   opts = opts || {};
   const headers = Object.assign({}, opts.headers||{}, await authHeader());
+  const fopts = Object.assign({}, opts, { headers });
+  if (!fopts.signal && genCtl) fopts.signal = genCtl.signal;
   let resp;
   try{
-    resp = await fetch(PUBLIC_API + path, Object.assign({}, opts, { headers }));
-  }catch(e){ throw new WakeError("network"); }
+    resp = await fetch(PUBLIC_API + path, fopts);
+  }catch(e){ if (isGenAbort(e)) throw e; throw new WakeError("network"); }
   if (resp.status === 502) throw new WakeError("http 502");
   if (resp.status === 401) handleSessionDead();
   return resp;
@@ -1544,7 +1600,7 @@ async function saveKeys(){
 }
 /* ↺ Reset (Keys sheet): wipe every key field AND the saved user_keys row. */
 async function clearSavedKeys(){
-  if (!window.confirm("Key တွေ အကုန် ဖျက်မှာ သေချာလား?")) return;
+  if (!(await confirmUi("Key တွေ အကုန် ဖျက်မှာ သေချာလား?"))) return;
   resetKeys();
   refreshProLocks();
   if (!sb || !session){ setMsg("profileMsg", "↺ Key တွေ ရှင်းပြီးပါပြီ။", "ok"); return; }
@@ -2046,10 +2102,12 @@ async function genEdge(){
       const ctx = audioCtx();
       const bufs = [];
       for (let i = 0; i < chunks.length; i++){
+        throwIfGenAborted();
         setMsg("statusMsg", "အပိုင်း " + (i+1) + "/" + chunks.length + " ထုတ်နေပါတယ်...", "info");
         const blob = await fetchChunk(chunks[i]);
         bufs.push(await ctx.decodeAudioData(await blob.arrayBuffer()));
       }
+      throwIfGenAborted();
       const wav = concatAudioBuffers(ctx, bufs);
       if (ctx.close) ctx.close();
       showResult(wav, "edge", text.length, ".wav");
@@ -2083,10 +2141,12 @@ async function genEl(){
       const ctx = audioCtx();
       const bufs = [];
       for (let i = 0; i < chunks.length; i++){
+        throwIfGenAborted();
         setMsg("statusMsg", "အပိုင်း " + (i+1) + "/" + chunks.length + " ထုတ်နေပါတယ်...", "info");
         const blob = await fetchChunk(chunks[i]);
         bufs.push(await ctx.decodeAudioData(await blob.arrayBuffer()));
       }
+      throwIfGenAborted();
       const wav = concatAudioBuffers(ctx, bufs);
       if (ctx.close) ctx.close();
       showResult(wav, "el", text.length, ".wav");
@@ -2164,7 +2224,7 @@ async function deleteElVoice(){
   const vid = $("elVoice").value;
   if (!vid) return;
   if (elProNotice()) return;
-  if (!confirm("ဒီ အသံ ကို ဖျက်မှာ သေချာလား?")) return;
+  if (!(await confirmUi("ဒီ အသံ ကို ဖျက်မှာ သေချာလား?"))) return;
   const btn = $("btnElDelete");
   btn.disabled = true; showWake(false);
   setMsg("statusMsg", "ဖျက်နေပါတယ်...", "info");
@@ -2210,10 +2270,12 @@ async function genGemini(){
       const ctx = audioCtx();
       const bufs = [];
       for (let i = 0; i < chunks.length; i++){
+        throwIfGenAborted();
         setMsg("statusMsg", "အပိုင်း " + (i+1) + "/" + chunks.length + " ထုတ်နေပါတယ်...", "info");
         const blob = await fetchChunk(chunks[i]);
         bufs.push(await ctx.decodeAudioData(await blob.arrayBuffer()));
       }
+      throwIfGenAborted();
       const wav = concatAudioBuffers(ctx, bufs);
       if (ctx.close) ctx.close();
       showResult(wav, "gemini", text.length, ".wav");
@@ -2238,6 +2300,7 @@ async function f5JobBlob(chunkText, refText, file){
   const deadline = Date.now() + 5*60*1000;
   while (Date.now() < deadline){
     await new Promise(r=>setTimeout(r, 3000));
+    throwIfGenAborted();
     const pr = await apiFetch("/api/pub/clone/jobs/" + encodeURIComponent(jobId), { headers: proHeadersFor("f5") });
     if (!pr.ok) throw new Error(await apiErrorText(pr));
     const st = await pr.json();
@@ -2273,9 +2336,11 @@ async function genF5(){
     try{
       const blobs = [];
       for (let i = 0; i < chunks.length; i++){
+        throwIfGenAborted();
         setMsg("statusMsg", "အပိုင်း " + (i+1) + "/" + chunks.length + " ထုတ်နေပါတယ်...", "info");
         blobs.push(await f5JobBlob(chunks[i], refText, file));
       }
+      throwIfGenAborted();
       showResult(await stitchChunkBlobs(blobs), "f5", text.length, ".wav");
     }catch(e){ handleGenError(e); }
     busy(false);
@@ -2295,6 +2360,7 @@ async function genF5(){
     const deadline = Date.now() + 5*60*1000;
     while (Date.now() < deadline){
       await new Promise(r=>setTimeout(r, 3000));
+      throwIfGenAborted();
       const pr = await apiFetch("/api/pub/clone/jobs/" + encodeURIComponent(jobId), { headers: proHeadersFor("f5") });
       if (!pr.ok) throw new Error(await apiErrorText(pr));
       const st = await pr.json();
@@ -2344,9 +2410,11 @@ async function genVox(){
     } else {
       const blobs = [];
       for (let i = 0; i < chunks.length; i++){
+        throwIfGenAborted();
         setMsg("statusMsg", "အပိုင်း " + (i+1) + "/" + chunks.length + " ထုတ်နေပါတယ်...", "info");
         blobs.push(await fetchChunk(chunks[i]));
       }
+      throwIfGenAborted();
       showResult(await stitchChunkBlobs(blobs), "vox", text.length, ".wav");
     }
   }catch(e){ handleGenError(e); }
@@ -2355,6 +2423,11 @@ async function genVox(){
 }
 
 function handleGenError(e){
+  /* User-cancelled generation: a quiet info line, NOT an error — no
+     wake/retry box; and since a cancelled run never reaches showResult,
+     nothing is shown, usage-logged or added to history. (Checked before
+     WakeError: apiFetch rethrows aborts instead of wrapping them.) */
+  if (isGenAbort(e)){ showWake(false); setMsg("statusMsg", "⛔ ရပ်လိုက်ပါပြီ", "info"); return; }
   if (e instanceof WakeError){ showWake(true); return; }
   showWake(false);
   setMsg("statusMsg", "❌ " + (e && e.message ? e.message : "တစ်ခုခု မှားနေပါတယ်။"), "err");
@@ -2475,11 +2548,35 @@ function openSheetEl(el){
   $("sheetBackdrop").classList.remove("hidden");
 }
 function closeSheets(){
+  /* Any sheet close that is not the confirm sheet's Yes button counts
+     as cancelling a pending custom confirm (No button, ✕, backdrop). */
+  settleConfirm(false);
   document.querySelectorAll(".sheet").forEach(s=>{ s.classList.remove("open"); s.setAttribute("aria-hidden","true"); });
   $("sheetBackdrop").classList.add("hidden");
 }
 function openKeysSheet(){ openSheetEl($("sheetKeys")); }
 function openSettingsSheet(){ openSheetEl($("sheetSettings")); }
+
+/* ---------------- custom confirm pop-up ----------------
+   Promise-based replacement for the native confirm dialog: one
+   reusable sheet (see #sheetConfirm markup). confirmUi(message)
+   resolves true only via the "ဖျက်မယ်" button; the No button, the ✕
+   and the backdrop all close the sheets, which settles the promise
+   false via the hook in closeSheets(). A second confirmUi call while
+   one is open resolves the first one false — no stacking. */
+let confirmResolveFn = null;
+function settleConfirm(v){
+  const r = confirmResolveFn; confirmResolveFn = null;
+  if (r) r(v);
+}
+function confirmUi(message){
+  settleConfirm(false);
+  return new Promise((resolve)=>{
+    confirmResolveFn = resolve;
+    $("confirmMsg").textContent = message || "";
+    openSheetEl($("sheetConfirm"));
+  });
+}
 
 /* Generic picker sheet: items = [{value,label,sub,badgeText,badgeClass,selected}].
    opts.search adds a filter box (used by the 30-voice Gemini list). */
@@ -2679,6 +2776,9 @@ function init(){
   $("gemDuo").addEventListener("change", e=> $("gemDuoBox").classList.toggle("hidden", !e.target.checked));
   $("btnGenerate").addEventListener("click", generate);
   $("btnRetry").addEventListener("click", ()=>{ showWake(false); generate(); });
+  $("btnCancelGen").addEventListener("click", ()=>{ if (genCtl) genCtl.abort(); });
+  $("btnConfirmYes").addEventListener("click", ()=>{ settleConfirm(true); closeSheets(); });
+  $("btnConfirmNo").addEventListener("click", ()=>{ closeSheets(); });
   $("btnElVoices").addEventListener("click", loadElVoices);
   $("elVoice").addEventListener("change", ()=>{ syncElDeleteBtn(); syncSelectButton("elVoice"); });
   $("btnElDelete").addEventListener("click", deleteElVoice);
@@ -2751,7 +2851,7 @@ function init(){
     finally{ link.textContent = origText; dlBusy = false; }
   });
   $("btnClearHistory").addEventListener("click", async ()=>{
-    if (!window.confirm("History အားလုံး ဖျက်မှာ သေချာလား?")) return;
+    if (!(await confirmUi("History အားလုံး ဖျက်မှာ သေချာလား?"))) return;
     await historyClear();
     renderHistory();
   });
