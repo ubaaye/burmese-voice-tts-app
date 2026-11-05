@@ -130,6 +130,9 @@
     color:var(--txt);font-size:11px;font-weight:700;padding:5px 6px;border-radius:8px;min-width:34px;line-height:1.2;}
   .apLoopBtn.on{background:rgba(77,163,255,.35);border-color:var(--accent);}
   .audioPlayer.compact .apSpeedBtn,.audioPlayer.compact .apLoopBtn{min-width:30px;padding:4px 5px;}
+  /* Player controls row (speed + loop) — sits BELOW the waveform, never on it */
+  .apCtl{display:flex;justify-content:flex-end;gap:6px;margin-top:6px;}
+  .audioPlayer.compact .apCtl{margin-top:4px;}
   /* Generation history (IndexedDB-backed) */
   .histRow{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:12px;
     padding:10px 12px;margin-top:10px;}
@@ -1135,7 +1138,10 @@ function makePlayer(audio, mount, opts){
     try{ audio.playbackRate = r; }catch(e){}
     spdBtn.textContent = (r === 1 ? "1" : String(r)) + "×";
   });
-  ui.appendChild(btn); ui.appendChild(wave); ui.appendChild(spdBtn);
+  ui.appendChild(btn); ui.appendChild(wave); ui.appendChild(time);
+  /* Speed + loop live in their own row under the waveform — never on top of it. */
+  const ctl = document.createElement("div"); ctl.className = "apCtl";
+  ctl.appendChild(spdBtn);
   /* Loop toggle — result player only (opts.loop). */
   if (opts.loop){
     const loopBtn = document.createElement("button");
@@ -1145,10 +1151,10 @@ function makePlayer(audio, mount, opts){
       try{ audio.loop = !audio.loop; }catch(e){}
       loopBtn.classList.toggle("on", !!audio.loop);
     });
-    ui.appendChild(loopBtn);
+    ctl.appendChild(loopBtn);
   }
-  ui.appendChild(time);
   mount.appendChild(ui);
+  mount.appendChild(ctl);
   let peaks = pseudoPeaks(WAVE_BARS);
   let loadToken = 0;
   const renderBars = ()=>{
