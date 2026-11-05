@@ -285,7 +285,10 @@
 
   <!-- PROFILE — signed-in email + sign-out -->
   <div class="card userbar">
-    <span class="email" id="userEmail"></span>
+    <div>
+      <span class="email" id="userEmail"></span>
+      <div id="ownerBadge" class="hidden" style="font-size:12px;color:#ffd740;margin-top:2px;">👑 Owner — Pro code မလိုပါ</div>
+    </div>
     <button id="btnSignOut" class="small">ထွက်မယ်</button>
   </div>
 
@@ -345,6 +348,7 @@
 const PUBLIC_API        = "https://burmese-voice-tts-public.onrender.com"; // public Render service (placeholder)
 const SUPABASE_URL      = "https://nfdkvungccscalshjmzo.supabase.co";              // ← deploy: real project URL
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mZGt2dW5nY2NzY2Fsc2hqbXpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM4NTk3NjgsImV4cCI6MjEwOTQzNTc2OH0.ldWyHiPwsebTsjxgQsCarYtlTcBEEUcD4piJlQfdbIo";                        // ← deploy: real anon (public) key
+const OWNER_EMAIL       = "old.burma.com@gmail.com"; // owner account: full Pro access, no pro code needed
 /* ===================================================================== */
 
 const $ = (id) => document.getElementById(id);
@@ -354,6 +358,11 @@ const sb = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
 if (!sb || SUPABASE_URL.includes("YOUR-")) $("configWarn").classList.remove("hidden");
 
 let session = null;                 // Supabase session
+/* Owner bypass: the owner's own login email gets full Pro without a pro code.
+   The server verifies the same email from the JWT — this only drives UI gating. */
+function isOwner(){
+  return !!(session && session.user && (session.user.email || "").toLowerCase() === OWNER_EMAIL);
+}
 let keys = { el_key:"", gemini_key:"", hf_token:"", pro_code:"" };
 let currentMode = "edge";
 let lastObjectUrl = null;
@@ -517,7 +526,7 @@ function refreshProLocks(){
     const pane = el.closest(".modePane"); if (!pane) return;
     const mode = pane.id.replace("pane-","");
     const missing = [];
-    if (!keys.pro_code) missing.push("Pro Code");
+    if (!keys.pro_code && !isOwner()) missing.push("Pro Code");
     if (PRO_KEY_FIELD[mode] && !keys[PRO_KEY_FIELD[mode]]) missing.push(PRO_KEY_LABEL[mode]);
     if (missing.length){
       el.innerHTML = "🔒 ဒီ feature သုံးရန် <b>My Profile</b> မှာ " + missing.join(" နှင့် ") + " ထည့်ထားဖို့ လိုပါတယ်။" +
@@ -526,7 +535,8 @@ function refreshProLocks(){
     } else el.classList.add("hidden");
   });
   const proMode = ["el","gemini","f5"].includes(currentMode);
-  $("btnGenerate").disabled = proMode && (!keys.pro_code || (PRO_KEY_FIELD[currentMode] && !keys[PRO_KEY_FIELD[currentMode]]));
+  const codeOk = !!keys.pro_code || isOwner();
+  $("btnGenerate").disabled = proMode && (!codeOk || (PRO_KEY_FIELD[currentMode] && !keys[PRO_KEY_FIELD[currentMode]]));
 }
 
 /* ---------------- result ---------------- */
@@ -604,7 +614,7 @@ function syncElDeleteBtn(){ $("btnElDelete").disabled = !$("elVoice").value; }
 function elProMissing(){
   const missing = [];
   if (!keys.el_key) missing.push("ElevenLabs API Key");
-  if (!keys.pro_code) missing.push("Pro Code");
+  if (!keys.pro_code && !isOwner()) missing.push("Pro Code");
   return missing;
 }
 function elProNotice(){
@@ -756,6 +766,7 @@ function renderAuth(){
   $("btnMenu").classList.toggle("hidden", !logged);
   if (!logged) closeDrawer();
   if (logged) $("userEmail").textContent = "👤 " + (session.user.email || "");
+  $("ownerBadge").classList.toggle("hidden", !(logged && isOwner()));
 }
 function openDrawer(){
   $("drawer").classList.add("open");
