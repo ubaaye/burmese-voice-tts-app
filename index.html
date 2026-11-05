@@ -1171,9 +1171,10 @@ function insertSpkTurn(name){
 /* ---------------- small helpers ---------------- */
 function setMsg(id, text, cls){
   const el=$(id); el.textContent=text||""; el.className="msg "+(cls||"info");
-  /* While a generation is busy, mirror the main status line into the
-     centered loading pop-up (initial label + per-part progress). */
-  if (id === "statusMsg" && loadingActive){
+  /* While a generation is busy — or a non-generation operation is
+     running via opBusy — mirror the main status line into the centered
+     loading pop-up (initial label + per-part progress). */
+  if (id === "statusMsg" && (loadingActive || opDepth > 0)){
     const pop = $("loadPopMsg");
     if (pop) pop.textContent = text || "";
   }
@@ -1225,6 +1226,43 @@ function busy(on, label){
     pop.setAttribute("aria-hidden", on ? "false" : "true");
   }
   if (on) setMsg("statusMsg", label || "⏳ အသံ ထုတ်နေပါတယ် — ခဏ စောင့်ပါ…", "info");
+}
+/* Start/finish feedback for NON-generation network operations (the
+   ElevenLabs voice add / delete / list refresh): the standing rule is
+   that ANY operation shows loading when it starts and a notice when it
+   finishes. opBusy reuses the centered loading pop-up, but voice ops
+   are not cancellable — the ⛔ cancel button is hidden, the generation
+   AbortController (genCtl) is never armed or touched, and the Generate
+   button is only plain-disabled (no wave relabel; that is busy()'s).
+   A depth counter lets calls nest: add/delete run a loadElVoices()
+   refresh inside their own span, and the pop stays up until the
+   OUTERMOST span ends. While opDepth > 0, setMsg mirrors the status
+   line into the pop-up just like it does for generations. When a
+   generation owns the pop (loadingActive), opBusy leaves it alone. */
+let opDepth = 0;
+function opBusy(on, label){
+  if (on){
+    opDepth++;
+    if (opDepth === 1 && !loadingActive){
+      const pop = $("loadPop");
+      if (pop){ pop.classList.remove("hidden"); pop.setAttribute("aria-hidden", "false"); }
+      const cancel = $("btnCancelGen");
+      if (cancel) cancel.classList.add("hidden");
+      $("btnGenerate").disabled = true;
+    }
+    if (label) setMsg("statusMsg", label, "info");
+  } else {
+    opDepth = Math.max(0, opDepth - 1);
+    if (opDepth === 0){
+      if (!loadingActive){
+        const pop = $("loadPop");
+        if (pop){ pop.classList.add("hidden"); pop.setAttribute("aria-hidden", "true"); }
+        $("btnGenerate").disabled = false;
+      }
+      const cancel = $("btnCancelGen");
+      if (cancel) cancel.classList.remove("hidden");
+    }
+  }
 }
 function showWake(on){ $("wakeBox").classList.toggle("hidden", !on); if(on) setMsg("statusMsg",""); }
 /* Build the Gemini style preset chips: click -> English style into #gemStyle.
@@ -2524,8 +2562,14 @@ async function genEl(){
    path produced the list plus a one-way hash of that credential — so a
    key/code change ignores the old cache. Raw keys/codes are NEVER
    stored, only the hash. */
-const EL_VOICES_CACHE_KEY = "bvtts_pub_elvoices_v2";
+const EL_VOICES_CACHE_KEY = "bvtts_pub_elvoices_v3";
 const EL_PROTECTED_VOICE_IDS = ["dwUkioTAzfgjL4m7E6As", "RANtSKxEy3vvVXaqppeT"];
+/* Voice ids the server says THIS Pro-code user created on the shared
+   account (created_voice_ids from the latest voices fetch; reset on
+   every fetch). Only meaningful for the "code" scope: those ids are
+   the ones the picker may add next to the shared "NLO" clone, and
+   the only ones that scope may delete. */
+let elCreatedIds = [];
 function elScopeHash(str){
   let h1 = 5381, h2 = 52711;
   const s = String(str || "");
@@ -2605,13 +2649,18 @@ function saveElSelected(){
 }
 /* Fetch + filter the EL voice list (throws on HTTP error, with .status).
    Filtering is scope-aware: a Pro-code visitor is using the owner's
-   server key, so that scope still sees only the exact-"NLO" clone. Own-key
-   and owner scopes see their cloned/professional voices, except the two
-   legacy core voices, with exact-"NLO" sorted first. */
+   server key, so that scope sees the shared exact-"NLO" clone plus
+   only the voices the server says THIS user created on the shared
+   account (created_voice_ids). Own-key and owner scopes see their
+   cloned/professional voices, except the two legacy core voices,
+   with exact-"NLO" sorted first. */
 async function fetchElVoices(){
+  elCreatedIds = [];
   const resp = await apiFetch("/api/pub/el/voices", { headers: proHeadersFor("el") });
   if (!resp.ok){ const err = new Error(await apiErrorText(resp)); err.status = resp.status; throw err; }
   const d = await resp.json();
+  elCreatedIds = (d && Array.isArray(d.created_voice_ids))
+    ? d.created_voice_ids.filter(id => typeof id === "string" && id) : [];
   const list = Array.isArray(d) ? d : (d.voices || []);
   /* Clone voices only: premade English voices (Roger/George/…) are dropped.
      Entries without a category field (old server shape) are kept. */
@@ -2633,9 +2682,21 @@ async function fetchElVoices(){
        server order so the default selection remains NLO when present. */
     voices = voices.filter(isExactNlo).concat(voices.filter(v => !isExactNlo(v)));
   } else {
-    /* "code" and any unknown/empty scope use the safest legacy behaviour. */
-    const nlo = clones.find(isExactNlo);
-    voices = nlo ? [nlo] : [];
+    /* "code": the shared exact-"NLO" clone + this user's own tracked
+       creations (de-duplicated by id, exact-"NLO" first). Any
+       unknown/empty scope has no tracked ids, so it falls back to
+       the safest legacy behaviour: exact-"NLO" only. */
+    const createdSet = new Set(elCreatedIds);
+    const seen = new Set();
+    voices = [];
+    clones.forEach(v=>{
+      if (seen.has(v.voice_id)) return;
+      if (isExactNlo(v) || createdSet.has(v.voice_id)){
+        seen.add(v.voice_id);
+        voices.push(v);
+      }
+    });
+    voices = voices.filter(isExactNlo).concat(voices.filter(v => !isExactNlo(v)));
   }
   /* Disambiguate duplicate display names only, using the voice-id suffix. */
   const nameCounts = {};
@@ -2651,7 +2712,11 @@ async function fetchElVoices(){
 }
 async function loadElVoices(){
   if (elProNotice()) return;
-  setMsg("statusMsg", "အသံ စာရင်း ယူနေပါတယ်...", "info");
+  /* Start/finish feedback: the loading pop-up covers the manual 🔄
+     refresh, and nests inside add/delete spans (depth counter). The
+     silent sign-in restore (initElVoices) does NOT come through here —
+     it calls fetchElVoices() directly and stays pop-up-free. */
+  opBusy(true, "⏳ အသံ စာရင်း ယူနေပါတယ်…");
   try{
     const voices = await fetchElVoices();
     populateElVoices(voices, $("elVoice").value);
@@ -2659,6 +2724,7 @@ async function loadElVoices(){
     setMsg("statusMsg", "✅ အသံ "+$("elVoice").options.length+" ခု ရပါပြီ။", "ok");
     syncElDeleteBtn();
   }catch(e){ handleGenError(e); }
+  finally{ opBusy(false); }
 }
 /* Sign-in restore: paint the cached list instantly (no network needed),
    then refresh silently in the background. With no usable cache, one
@@ -2686,7 +2752,11 @@ async function initElVoices(){
 
 function syncElDeleteBtn(){
   const vid = $("elVoice").value;
-  $("btnElDelete").disabled = !vid || EL_PROTECTED_VOICE_IDS.includes(vid);
+  let disabled = !vid || EL_PROTECTED_VOICE_IDS.includes(vid);
+  /* Pro-code scope: only the user's own tracked creations may be
+     deleted — never the shared "NLO" clone or anyone else's voice. */
+  if (unlockVia("el") === "code" && !elCreatedIds.includes(vid)) disabled = true;
+  $("btnElDelete").disabled = disabled;
 }
 function elProNotice(){
   if (proUnlocked("el")) return false;
@@ -2703,7 +2773,12 @@ async function addElVoice(){
   const btn = $("btnElCloneAdd");
   const oldLabel = btn.textContent;
   btn.disabled = true; btn.textContent = "ထည့်နေပါတယ်...";
-  setMsg("statusMsg", "အသံ အသစ် ထည့်နေပါတယ်...", "info"); showWake(false);
+  showWake(false);
+  /* Loading pop-up for the whole add (the refresh below nests inside
+     this span). The finish notice is captured and posted AFTER the pop
+     closes, so it lands in the status line as the final word. */
+  opBusy(true, "⏳ အသံ အသစ် ထည့်နေပါတယ်…");
+  let doneMsg = null;
   try{
     const fd = new FormData();
     fd.append("name", name);
@@ -2722,13 +2797,15 @@ async function addElVoice(){
     syncSelectButton("elVoice");
     syncElDeleteBtn();
     $("elCloneName").value = ""; $("elCloneSample").value = "";
-    if (newInPicker){
-      setMsg("statusMsg", "✅ အသံ အသစ် «" + (d.name || name) + "» ထည့်ပြီးပါပြီ။", "ok");
-    } else {
-      setMsg("statusMsg", "အသံ ထည့်ပြီးပေမယ့် စာရင်းမှာ မတွေ့သေးပါ — 🔄 နဲ့ ပြန်ယူကြည့်ပါ။", "err");
-    }
+    doneMsg = newInPicker
+      ? ["✅ အသံ အသစ် «" + (d.name || name) + "» ထည့်ပြီးပါပြီ။", "ok"]
+      : ["အသံ ထည့်ပြီးပေမယ့် စာရင်းမှာ မတွေ့သေးပါ — 🔄 နဲ့ ပြန်ယူကြည့်ပါ။", "err"];
   }catch(e){ handleGenError(e); }
-  btn.disabled = false; btn.textContent = oldLabel;
+  finally{
+    opBusy(false);
+    btn.disabled = false; btn.textContent = oldLabel;
+  }
+  if (doneMsg) setMsg("statusMsg", doneMsg[0], doneMsg[1]);
 }
 
 async function deleteElVoice(){
@@ -2739,18 +2816,28 @@ async function deleteElVoice(){
     syncElDeleteBtn();
     return;
   }
+  if (unlockVia("el") === "code" && !elCreatedIds.includes(vid)){
+    setMsg("statusMsg", "ကိုယ်တိုင် ဖန်တီးထားတဲ့ အသံပဲ ဖျက်လို့ရပါတယ်။", "err");
+    syncElDeleteBtn();
+    return;
+  }
   if (elProNotice()) return;
   if (!(await confirmUi("ဒီ အသံ ကို ဖျက်မှာ သေချာလား?"))) return;
   const btn = $("btnElDelete");
   btn.disabled = true; showWake(false);
-  setMsg("statusMsg", "ဖျက်နေပါတယ်...", "info");
+  /* Loading pop-up for the whole delete (the refresh below nests
+     inside this span); the finish notice posts after the pop closes. */
+  opBusy(true, "⏳ အသံ ဖျက်နေပါတယ်…");
+  let doneMsg = null;
   try{
     const resp = await apiFetch("/api/pub/el/voices/" + encodeURIComponent(vid), { method:"DELETE", headers: proHeadersFor("el") });
     if (!resp.ok) throw new Error(await apiErrorText(resp));
     await loadElVoices();
     syncElDeleteBtn();
-    setMsg("statusMsg", "✅ အသံ ဖျက်ပြီးပါပြီ။", "ok");
+    doneMsg = ["✅ အသံ ဖျက်ပြီးပါပြီ။", "ok"];
   }catch(e){ handleGenError(e); syncElDeleteBtn(); }
+  finally{ opBusy(false); }
+  if (doneMsg) setMsg("statusMsg", doneMsg[0], doneMsg[1]);
 }
 
 async function genGemini(){
