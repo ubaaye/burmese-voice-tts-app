@@ -94,6 +94,19 @@
     border-top-color:#fff;border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-2px;margin-right:6px;}
   @keyframes sp{to{transform:rotate(360deg)}}
   a{color:var(--accent);}
+  /* Right slide menu (drawer) */
+  .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:59;}
+  .drawer{
+    position:fixed;top:0;right:0;height:100dvh;width:82%;max-width:340px;z-index:60;
+    background:rgba(17,23,42,.97);border-left:1px solid var(--glass-border);
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    box-shadow:-12px 0 32px rgba(0,0,0,.45);
+    padding:14px 12px calc(20px + env(safe-area-inset-bottom));overflow-y:auto;
+    transform:translateX(110%);visibility:hidden;
+    transition:transform .28s ease, visibility 0s linear .28s;
+  }
+  .drawer.open{transform:translateX(0);visibility:visible;transition:transform .28s ease;}
+  .drawerHead{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:16px;margin-bottom:12px;}
 </style>
 </head>
 <body>
@@ -102,6 +115,7 @@
     <div class="logo">🎙️</div>
     <h1>Burmese Voice TTS</h1>
     <span class="sub">PUBLIC</span>
+    <button id="btnMenu" class="hidden" type="button" title="Menu" style="margin-left:auto;font-size:16px;line-height:1;">☰</button>
   </header>
 
   <div id="configWarn" class="warn hidden">⚠️ Supabase ချိတ်ဆက်မှု မပြင်ရသေးပါ — deploy လုပ်ချိန်တွင် ပြင်ပါမည်။ (နည်းပညာ အဖွဲ့ အတွက်: SUPABASE_URL / SUPABASE_ANON_KEY)</div>
@@ -125,11 +139,6 @@
 
   <!-- ============ APP (signed-in view) ============ -->
   <div id="appArea" class="hidden">
-
-    <div class="card userbar">
-      <span class="email" id="userEmail"></span>
-      <button id="btnSignOut" class="small">ထွက်မယ်</button>
-    </div>
 
     <div class="card">
       <!-- Mode switcher -->
@@ -249,53 +258,70 @@
       </div>
     </div>
 
-    <!-- ============ MY PROFILE ============ -->
-    <div class="card">
-      <button class="profileHead" id="profileToggle" type="button">
-        <span>👤 My Profile — API Key များ</span><span id="profileChevron">▸</span>
-      </button>
-      <div id="profileBody" class="hidden">
-        <div class="notice">
-          🔑 Key တွေကို <b>သင့် အကောင့်ထဲမှာပဲ</b> သိမ်းထားပြီး သင့် တောင်းဆိုမှုတွေ အတွက်ပဲ သုံးပါတယ်။
-          သူများ မမြင်နိုင်ပါ။ ဒီ app အတွက် <b>သီးသန့် ထုတ်ထားတဲ့ key</b> ကိုပဲ ထည့်သုံးဖို့ အကြံပြုပါတယ် —
-          မသုံးတော့ရင် မူရင်း နေရာကနေ အချိန်မရွေး ပြန် ဖျက်/ပိတ် လိုက်လို့ ရပါတယ်။
-        </div>
-
-        <label>ElevenLabs API Key</label>
-        <div class="keyRow">
-          <input type="password" id="keyEl" placeholder="sk_..." autocomplete="off">
-          <button class="eye" type="button" data-eye="keyEl">👁️</button>
-        </div>
-
-        <label>Gemini API Key</label>
-        <div class="keyRow">
-          <input type="password" id="keyGemini" placeholder="AIza..." autocomplete="off">
-          <button class="eye" type="button" data-eye="keyGemini">👁️</button>
-        </div>
-        <div class="muted">Gemini key မရှိသေးရင် Google AI Studio မှာ <b>အခမဲ့</b> ထုတ်လို့ ရပါတယ် →
-          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> (Get API key နှိပ်ရုံပါပဲ)</div>
-
-        <label>HuggingFace Token (F5 Clone အတွက်)</label>
-        <div class="keyRow">
-          <input type="password" id="keyHf" placeholder="hf_..." autocomplete="off">
-          <button class="eye" type="button" data-eye="keyHf">👁️</button>
-        </div>
-
-        <label>⭐ Pro Code (UUID) — ပိုင်ရှင် ပေးထားတဲ့ code</label>
-        <div class="keyRow">
-          <input type="password" id="keyPro" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
-          <button class="eye" type="button" data-eye="keyPro">👁️</button>
-        </div>
-        <div class="muted">Pro feature တွေ (ElevenLabs / Gemini / F5) သုံးရန် Pro code လိုပါတယ်။ မရှိရင် app ပိုင်ရှင်ထံ တောင်းပါ။</div>
-
-        <button id="btnSaveKeys" class="primary" style="width:100%;margin-top:14px;">💾 သိမ်းမယ်</button>
-        <div id="profileMsg" class="msg info"></div>
-      </div>
-    </div>
-
     <p class="muted" style="text-align:center;">Edge TTS = အခမဲ့ · Pro feature များ = ကိုယ့် key + Pro code</p>
   </div>
 </div>
+
+
+<!-- ============ RIGHT SLIDE MENU (profile + user settings) ============ -->
+<div id="drawerBackdrop" class="backdrop hidden"></div>
+<aside id="drawer" class="drawer" aria-hidden="true">
+  <div class="drawerHead">
+    <span>☰ Menu</span>
+    <button id="btnDrawerClose" class="small" type="button">✕ ပိတ်မယ်</button>
+  </div>
+
+  <!-- PROFILE — signed-in email + sign-out -->
+  <div class="card userbar">
+    <span class="email" id="userEmail"></span>
+    <button id="btnSignOut" class="small">ထွက်မယ်</button>
+  </div>
+
+  <!-- USER SETTINGS — My Profile key block (moved from main flow) -->
+  <!-- ============ MY PROFILE ============ -->
+  <div class="card">
+    <button class="profileHead" id="profileToggle" type="button">
+      <span>👤 My Profile — API Key များ</span><span id="profileChevron">▸</span>
+    </button>
+    <div id="profileBody" class="hidden">
+      <div class="notice">
+        🔑 Key တွေကို <b>သင့် အကောင့်ထဲမှာပဲ</b> သိမ်းထားပြီး သင့် တောင်းဆိုမှုတွေ အတွက်ပဲ သုံးပါတယ်။
+        သူများ မမြင်နိုင်ပါ။ ဒီ app အတွက် <b>သီးသန့် ထုတ်ထားတဲ့ key</b> ကိုပဲ ထည့်သုံးဖို့ အကြံပြုပါတယ် —
+        မသုံးတော့ရင် မူရင်း နေရာကနေ အချိန်မရွေး ပြန် ဖျက်/ပိတ် လိုက်လို့ ရပါတယ်။
+      </div>
+
+      <label>ElevenLabs API Key</label>
+      <div class="keyRow">
+        <input type="password" id="keyEl" placeholder="sk_..." autocomplete="off">
+        <button class="eye" type="button" data-eye="keyEl">👁️</button>
+      </div>
+
+      <label>Gemini API Key</label>
+      <div class="keyRow">
+        <input type="password" id="keyGemini" placeholder="AIza..." autocomplete="off">
+        <button class="eye" type="button" data-eye="keyGemini">👁️</button>
+      </div>
+      <div class="muted">Gemini key မရှိသေးရင် Google AI Studio မှာ <b>အခမဲ့</b> ထုတ်လို့ ရပါတယ် →
+        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> (Get API key နှိပ်ရုံပါပဲ)</div>
+
+      <label>HuggingFace Token (F5 Clone အတွက်)</label>
+      <div class="keyRow">
+        <input type="password" id="keyHf" placeholder="hf_..." autocomplete="off">
+        <button class="eye" type="button" data-eye="keyHf">👁️</button>
+      </div>
+
+      <label>⭐ Pro Code (UUID) — ပိုင်ရှင် ပေးထားတဲ့ code</label>
+      <div class="keyRow">
+        <input type="password" id="keyPro" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
+        <button class="eye" type="button" data-eye="keyPro">👁️</button>
+      </div>
+      <div class="muted">Pro feature တွေ (ElevenLabs / Gemini / F5) သုံးရန် Pro code လိုပါတယ်။ မရှိရင် app ပိုင်ရှင်ထံ တောင်းပါ။</div>
+
+      <button id="btnSaveKeys" class="primary" style="width:100%;margin-top:14px;">💾 သိမ်းမယ်</button>
+      <div id="profileMsg" class="msg info"></div>
+    </div>
+  </div>
+</aside>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -634,7 +660,20 @@ function renderAuth(){
   const logged = !!session;
   $("loginCard").classList.toggle("hidden", logged);
   $("appArea").classList.toggle("hidden", !logged);
+  $("btnMenu").classList.toggle("hidden", !logged);
+  if (!logged) closeDrawer();
   if (logged) $("userEmail").textContent = "👤 " + (session.user.email || "");
+}
+function openDrawer(){
+  $("drawer").classList.add("open");
+  $("drawer").setAttribute("aria-hidden", "false");
+  $("drawerBackdrop").classList.remove("hidden");
+}
+function closeDrawer(){
+  const d = $("drawer"); if (!d) return;
+  d.classList.remove("open");
+  d.setAttribute("aria-hidden", "true");
+  $("drawerBackdrop").classList.add("hidden");
 }
 
 /* ---------------- wiring ---------------- */
@@ -685,6 +724,9 @@ function init(){
   $("btnSignIn").addEventListener("click", signIn);
   $("btnSignUp").addEventListener("click", signUp);
   $("btnSignOut").addEventListener("click", async ()=>{ if (sb) await sb.auth.signOut(); });
+  $("btnMenu").addEventListener("click", openDrawer);
+  $("btnDrawerClose").addEventListener("click", closeDrawer);
+  $("drawerBackdrop").addEventListener("click", closeDrawer);
   $("profileToggle").addEventListener("click", ()=>{
     const body=$("profileBody"), open=body.classList.toggle("hidden")===false;
     $("profileChevron").textContent = open ? "▾" : "▸";
