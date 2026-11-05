@@ -106,6 +106,20 @@
     background:linear-gradient(180deg,var(--accent),var(--accent2));
     animation:waveEq 1.05s ease-in-out infinite;}
   @keyframes waveEq{0%,100%{height:6px}50%{height:24px}}
+  /* Copy/selection lockdown — app-like: UI text can't be selected/copied.
+     Form fields keep normal text behaviour so keys/text can still be pasted. */
+  *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+  input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;}
+  /* Generate button busy state: waveform inside the button itself */
+  #btnGenerate{display:flex;align-items:center;justify-content:center;gap:10px;}
+  .btnWave{display:inline-flex;align-items:center;gap:3px;height:18px;flex:0 0 auto;}
+  .btnWave span{width:3px;height:6px;border-radius:2px;flex:0 0 auto;
+    background:rgba(255,255,255,.95);
+    animation:waveEqBtn 1.05s ease-in-out infinite;}
+  @keyframes waveEqBtn{0%,100%{height:5px}50%{height:16px}}
+  /* VoxCPM pane fully off (no live session / admin switch off): dimmed + inert */
+  #pane-vox.paneOff label{opacity:.55;}
+  #pane-vox.paneOff input,#pane-vox.paneOff textarea,#pane-vox.paneOff button{opacity:.45;}
   /* Select-replacement picker button (opens a bottom sheet) */
   .pickBtn{width:100%;background:rgba(0,0,0,.28);border:1px solid var(--glass-border);border-radius:10px;
     color:var(--txt);padding:10px;font-size:14.5px;display:flex;align-items:center;gap:8px;text-align:left;}
@@ -408,6 +422,7 @@
       <div class="muted">Pro code ရှိရင် ကိုယ့် key မထည့်ဘဲ owner ရဲ့ key နဲ့ Pro feature တွေ သုံးနိုင်ပါတယ်။ ကိုယ့် key ထည့်ထားရင် code မလိုပါ။</div>
 
       <button id="btnSaveKeys" class="primary" style="width:100%;margin-top:14px;">💾 သိမ်းမယ်</button>
+      <button id="btnResetKeys" type="button" style="width:100%;margin-top:8px;">↺ Reset</button>
       <div id="profileMsg" class="msg info"></div>
       <div id="keysStatus" class="msg ok hidden"></div>
   </div>
@@ -422,6 +437,7 @@
       <input type="range" id="volSlider" min="50" max="200" step="5" value="100">
       <span class="sliderVal" id="volVal">100%</span>
     </div>
+    <button id="btnResetVol" type="button" style="width:100%;margin-top:12px;">↺ Reset</button>
   </div>
 </div>
 
@@ -488,9 +504,35 @@ const GEM_STYLE_PRESETS = [
 
 /* ---------------- small helpers ---------------- */
 function setMsg(id, text, cls){ const el=$(id); el.textContent=text||""; el.className="msg "+(cls||"info"); }
+let genBtnBusy = false;
+/* In-button waveform bars: [animation-delay, animation-duration] pairs,
+   mirroring the header waveBar's pattern at button size. */
+const BTN_WAVE = [["-.95s",""],["-.42s","1.2s"],["-.78s",""],["-.15s",".9s"],
+  ["-.63s",""],["-.30s","1.15s"],["-.88s",""],["-.05s",".95s"],
+  ["-.55s",""],["-.72s","1.25s"],["-.20s",""],["-.48s",".9s"]];
 function busy(on, label){
   const b=$("btnGenerate"); b.disabled=on;
-  b.textContent = on ? (label||"ထုတ်နေပါတယ်...") : "🔊 အသံ ထုတ်မယ်";
+  if (on && !genBtnBusy){
+    /* Button itself becomes the waveform loader (+ short label);
+       per-flow detail still goes to the status line below. */
+    genBtnBusy = true;
+    b.innerHTML = "";
+    const w = document.createElement("span");
+    w.className = "btnWave"; w.setAttribute("aria-hidden","true");
+    BTN_WAVE.forEach(([delay, dur])=>{
+      const s = document.createElement("span");
+      s.style.animationDelay = delay;
+      if (dur) s.style.animationDuration = dur;
+      w.appendChild(s);
+    });
+    b.appendChild(w);
+    const t = document.createElement("span");
+    t.textContent = "ထုတ်နေပါတယ်…";
+    b.appendChild(t);
+  } else if (!on && genBtnBusy){
+    genBtnBusy = false;
+    b.textContent = "🔊 အသံ ထုတ်မယ်";
+  }
   $("loadBar").classList.toggle("hidden", !on);
   if (on) setMsg("statusMsg", label || "⏳ အသံ ထုတ်နေပါတယ် — ခဏ စောင့်ပါ…", "info");
 }
@@ -715,6 +757,17 @@ function renderVoxStatus(){
     el.textContent = "✅ သုံးလို့ရပါတယ်";
     el.className = "msg ok";
   }
+  /* No live session (or admin switch off) -> the whole pane is inert:
+     every control disabled + dimmed until the server reports usable.
+     The owner case arrives via these same flags — no client owner logic. */
+  const usable = !!(voxStatus.enabled && voxStatus.available);
+  ["voxRef","voxRefText","voxText"].forEach(id=>{
+    const c = $(id); if (c) c.disabled = !usable;
+  });
+  const fixBtn = document.querySelector('#pane-vox [data-fix="voxText"]');
+  if (fixBtn) fixBtn.disabled = !usable;
+  const pane = $("pane-vox");
+  if (pane) pane.classList.toggle("paneOff", !usable);
 }
 /* Like apiFetch, but a 503 response is returned (not turned into a WakeError)
    so the vox routes' own {"detail": "..."} (e.g. session not available) shows. */
@@ -758,6 +811,28 @@ async function saveKeys(){
   }, { onConflict: "user_id" });
   if (error) setMsg("profileMsg", "သိမ်း မရပါ: " + error.message, "err");
   else { keysSavedAt = new Date().toISOString(); renderKeysStatus(); setMsg("profileMsg", "✅ သိမ်းပြီးပါပြီ။", "ok"); refreshProLocks(); }
+}
+/* ↺ Reset (Keys sheet): wipe every key field AND the saved user_keys row. */
+async function clearSavedKeys(){
+  if (!window.confirm("Key တွေ အကုန် ဖျက်မှာ သေချာလား?")) return;
+  resetKeys();
+  refreshProLocks();
+  if (!sb || !session){ setMsg("profileMsg", "↺ Key တွေ ရှင်းပြီးပါပြီ။", "ok"); return; }
+  setMsg("profileMsg", "ဖျက်နေပါတယ်...", "info");
+  const { error } = await sb.from("user_keys").upsert({
+    user_id: session.user.id, el_key:"", gemini_key:"", hf_token:"", pro_code:"",
+    updated_at: new Date().toISOString()
+  }, { onConflict: "user_id" });
+  if (error) setMsg("profileMsg", "ဖျက် မရပါ: " + error.message, "err");
+  else { keysSavedAt = ""; renderKeysStatus(); setMsg("profileMsg", "↺ Key တွေ အကုန် ဖျက်ပြီးပါပြီ။", "ok"); }
+}
+/* ↺ Reset (Settings sheet): volume back to 100% — the slider's own input
+   handler updates the % label and localStorage (gain is read from the
+   slider at generation time, so this covers live gain too). */
+function resetVolume(){
+  const vol = $("volSlider"); if (!vol) return;
+  vol.value = "100";
+  vol.dispatchEvent(new Event("input", { bubbles:true }));
 }
 
 /* ---------------- Pro lock notices ---------------- */
@@ -1463,6 +1538,15 @@ function init(){
   syncSelectButton("elVoice");
   syncModeBtn();
   $("btnSaveKeys").addEventListener("click", saveKeys);
+  $("btnResetKeys").addEventListener("click", clearSavedKeys);
+  $("btnResetVol").addEventListener("click", resetVolume);
+  /* Copy lockdown: no long-press/right-click menu outside form fields
+     (pasting into inputs/textareas keeps working). */
+  document.addEventListener("contextmenu", e=>{
+    const t = e.target;
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+    e.preventDefault();
+  });
   document.querySelectorAll("[data-eye]").forEach(b=>{
     b.addEventListener("click", ()=>{
       const inp=$(b.dataset.eye);
@@ -1482,6 +1566,7 @@ function init(){
       if (session){ await loadKeys(); await loadControls(); await loadVoxStatus(); }
     });
   }
+  renderVoxStatus();
   refreshProLocks();
 }
 document.addEventListener("DOMContentLoaded", init);
