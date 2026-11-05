@@ -129,6 +129,12 @@
   .apTime{font-size:12px;color:var(--muted);white-space:nowrap;min-width:74px;text-align:right;font-variant-numeric:tabular-nums;}
   .audioPlayer.compact .apTime{min-width:66px;font-size:11.5px;}
   .uploadPreview{margin-top:2px;}
+  /* Mic recorder rows under the audio-upload inputs */
+  .recRow{display:flex;align-items:center;gap:8px;margin-top:6px;}
+  .recStat{font-size:12.5px;color:var(--muted);}
+  .recDot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#ff5252;margin-right:5px;animation:recPulse 1s ease-in-out infinite;}
+  @keyframes recPulse{0%,100%{opacity:1}50%{opacity:.2}}
+  button.recLive{border-color:#ff5252;color:#ff9d97;}
   .dlBtn{display:inline-block;margin-top:8px;color:var(--accent);font-size:13.5px;text-decoration:none;}
   /* Player extras: playback-speed cycle + loop toggle (result player) */
   .apSpeedBtn,.apLoopBtn{flex:0 0 auto;border:1px solid transparent;background:rgba(255,255,255,.10);
@@ -546,6 +552,7 @@
           <input type="text" id="elCloneName" placeholder="ဥပမာ — ကျွန်တော့် အသံ" autocomplete="off">
           <label>နမူနာ အသံဖိုင်</label>
           <input type="file" id="elCloneSample" accept="audio/*">
+          <div class="recRow"><button type="button" class="small" id="elCloneSampleRecBtn">🎤 အသံသွင်း</button><span class="recStat" id="elCloneSampleRecStat"></span></div>
           <div id="elCloneSamplePreview" class="uploadPreview hidden"></div>
           <div class="muted">နမူနာ အသံဖိုင် — ၁ မိနစ် ဝန်းကျင်, ရှင်းလင်းတဲ့ အသံ က ပိုကောင်း</div>
           <button id="btnElCloneAdd" type="button" class="primary" style="width:100%;margin-top:10px;">ထည့်မယ်</button>
@@ -605,6 +612,7 @@
       <div class="modePane hidden" id="pane-f5">
         <label>နမူနာ အသံဖိုင် (၅–၁၀ စက္ကန့် အသံကြည် ဖိုင်)</label>
         <input type="file" id="f5Ref" accept="audio/*">
+        <div class="recRow"><button type="button" class="small" id="f5RefRecBtn">🎤 အသံသွင်း</button><span class="recStat" id="f5RefRecStat"></span></div>
         <div id="f5RefPreview" class="uploadPreview hidden"></div>
         <label>နမူနာ အသံထဲက စာသား (အတိအကျ)</label>
         <textarea id="f5RefText" style="min-height:48px;" placeholder="နမူနာ အသံထဲမှာ ပြောထားတဲ့ စာသား အတိအကျ ရေးပါ"></textarea>
@@ -628,6 +636,7 @@
         <div id="voxStatus" class="msg info">🔒 VoxCPM ကို admin က ပိတ်ထားပါတယ် — ဖွင့်ထားတဲ့ အချိန်မှ သုံးလို့ရပါမယ်</div>
         <label>နမူနာ အသံဖိုင် (clone လုပ်မယ့် အသံ)</label>
         <input type="file" id="voxRef" accept="audio/*">
+        <div class="recRow"><button type="button" class="small" id="voxRefRecBtn">🎤 အသံသွင်း</button><span class="recStat" id="voxRefRecStat"></span></div>
         <div id="voxRefPreview" class="uploadPreview hidden"></div>
         <label>နမူနာ အသံထဲက စာသား (အတိအကျ)</label>
         <textarea id="voxRefText" style="min-height:48px;" placeholder="နမူနာ အသံထဲမှာ ပြောထားတဲ့ စာသား အတိအကျ ရေးပါ"></textarea>
@@ -1798,6 +1807,130 @@ function attachUploadPreview(inputId, mountId){
   });
 }
 
+/* ---------------- mic recording for upload fields ----------------
+   One recorder per audio-upload input (EL clone sample, F5 ref, Vox
+   ref): tap 🎤, speak, tap ⏹ — the take is converted to 16 kHz mono
+   WAV (decode + downmix/resample + the shared encodeWav) and injected
+   into the input via setInputFile, so the existing preview player and
+   every submit flow treat it exactly like a picked file. If conversion
+   fails anywhere, the raw recorded blob is attached instead. Only ONE
+   recorder runs at a time: starting one stops the previous take
+   (which is attached, not discarded). */
+let _activeRec = null;   /* the recorder instance capturing right now */
+
+/* Assign a programmatic File to a file input (the DataTransfer route).
+   One tiny injection point for the whole recorder flow. */
+function setInputFile(input, file){
+  try{
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    return !!(input.files && input.files[0] === file);
+  }catch(e){ return false; }
+}
+
+/* Decode a recorded blob and re-encode it as 16 kHz mono WAV via the
+   shared encodeWav (which only needs a buffer-shaped object). Throws
+   on any failure — the caller falls back to the raw blob. */
+async function recordingToWavFile(blob){
+  const raw = await blob.arrayBuffer();
+  const ctx = audioCtx();
+  const buf = await ctx.decodeAudioData(raw.slice(0));
+  if (ctx.close) ctx.close();
+  const SR = 16000, inSr = buf.sampleRate, inLen = buf.length, nCh = buf.numberOfChannels;
+  const outLen = Math.max(1, Math.round(inLen * SR / inSr));
+  const chans = [];
+  for (let c = 0; c < nCh; c++) chans.push(buf.getChannelData(c));
+  const out = new Float32Array(outLen);
+  for (let i = 0; i < outLen; i++){
+    const pos = i * inSr / SR, j = Math.floor(pos), f = pos - j;
+    const j0 = Math.min(j, inLen - 1), j1 = Math.min(j + 1, inLen - 1);
+    let s = 0;
+    for (let c = 0; c < nCh; c++) s += chans[c][j0] + (chans[c][j1] - chans[c][j0]) * f;
+    out[i] = s / nCh;
+  }
+  const wavBuf = { numberOfChannels:1, sampleRate:SR, length:outLen, getChannelData:()=>out };
+  return new File([encodeWav(wavBuf)], "recording.wav", { type:"audio/wav" });
+}
+
+function attachRecorder(inputId){
+  const input = $(inputId), btn = $(inputId + "RecBtn"), stat = $(inputId + "RecStat");
+  if (!input || !btn || !stat) return null;
+  let mr = null, stream = null, chunks = [], timer = null, startedAt = 0, secs = 0, recType = "audio/webm";
+  const fmt = s => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  const MIC_ERR = "🎤 မိုက် သုံးခွင့် မရပါ — browser setting မှာ ခွင့်ပြုပေးပါ။";
+  function stopTracks(){
+    if (stream){ stream.getTracks().forEach(t=>{ try{ t.stop(); }catch(e){} }); stream = null; }
+  }
+  function uiIdle(){ btn.textContent = "🎤 အသံသွင်း"; btn.classList.remove("recLive"); }
+  function cleanup(){
+    if (timer){ clearInterval(timer); timer = null; }
+    stopTracks(); mr = null;
+    if (_activeRec === api) _activeRec = null;
+  }
+  function onStopped(){
+    const blob = new Blob(chunks, { type: recType });
+    const dur = fmt(secs);
+    chunks = [];
+    cleanup(); uiIdle();
+    (async ()=>{
+      let file = null;
+      try{ file = await recordingToWavFile(blob); }
+      catch(e){
+        const ext = recType.includes("mp4") ? "mp4" : recType.includes("ogg") ? "ogg" :
+                    recType.includes("wav") ? "wav" : "webm";
+        file = new File([blob], "recording." + ext, { type: recType });
+      }
+      if (setInputFile(input, file)){
+        input.dispatchEvent(new Event("change", { bubbles:true }));
+        stat.textContent = "🎤 သွင်းထားတဲ့ အသံ (" + dur + ")";
+      } else {
+        stat.textContent = "";
+        setMsg("statusMsg", "🎤 သွင်းထားတဲ့ အသံ ထည့်လို့ မရပါ — ဖိုင် ရွေးပြီး ထည့်ပေးပါ။", "err");
+      }
+    })();
+  }
+  const api = {
+    /* Stop + attach the take (normal stop path). */
+    stop(){ if (mr && mr.state !== "inactive"){ try{ mr.stop(); }catch(e){ cleanup(); uiIdle(); } } },
+    /* Stop + release the mic WITHOUT attaching (page is going away). */
+    kill(){
+      if (mr){ try{ mr.onstop = null; if (mr.state !== "inactive") mr.stop(); }catch(e){} }
+      cleanup(); uiIdle();
+    },
+    get recording(){ return !!mr; }
+  };
+  btn.addEventListener("click", async ()=>{
+    if (mr){ api.stop(); return; }
+    if (_activeRec && _activeRec !== api) _activeRec.stop();
+    const md = navigator.mediaDevices;
+    if (!md || !md.getUserMedia || typeof MediaRecorder === "undefined"){
+      setMsg("statusMsg", MIC_ERR, "err"); return;
+    }
+    let st = null;
+    try{ st = await md.getUserMedia({ audio:true }); }
+    catch(e){ setMsg("statusMsg", MIC_ERR, "err"); return; }
+    stream = st; chunks = []; secs = 0;
+    try{ mr = new MediaRecorder(stream); }
+    catch(e){ cleanup(); setMsg("statusMsg", MIC_ERR, "err"); return; }
+    recType = mr.mimeType || "audio/webm";
+    mr.ondataavailable = e=>{ if (e.data && e.data.size) chunks.push(e.data); };
+    mr.onstop = onStopped;
+    startedAt = Date.now();
+    stat.innerHTML = '<span class="recDot"></span>' + fmt(0);
+    timer = setInterval(()=>{
+      secs = Math.floor((Date.now() - startedAt) / 1000);
+      stat.innerHTML = '<span class="recDot"></span>' + fmt(secs);
+    }, 250);
+    btn.textContent = "⏹ ရပ်"; btn.classList.add("recLive");
+    _activeRec = api;
+    try{ mr.start(); }
+    catch(e){ cleanup(); uiIdle(); setMsg("statusMsg", MIC_ERR, "err"); }
+  });
+  return api;
+}
+window.addEventListener("pagehide", ()=>{ if (_activeRec) _activeRec.kill(); });
+
 /* ---------------- landing sample players ----------------
    Static files beside index.html; plain <audio> elements with
    preload="none", so nothing downloads (and no login is needed)
@@ -1929,6 +2062,8 @@ function renderVoxStatus(){
   if (clearBtn) clearBtn.disabled = !usable;
   const clearRefBtn = document.querySelector('#pane-vox [data-clear="voxRefText"]');
   if (clearRefBtn) clearRefBtn.disabled = !usable;
+  const voxRecBtn = $("voxRefRecBtn");
+  if (voxRecBtn) voxRecBtn.disabled = !usable;
   const pane = $("pane-vox");
   if (pane) pane.classList.toggle("paneOff", !usable);
 }
@@ -3341,6 +3476,9 @@ function init(){
   attachUploadPreview("f5Ref", "f5RefPreview");
   attachUploadPreview("voxRef", "voxRefPreview");
   attachUploadPreview("elCloneSample", "elCloneSamplePreview");
+  attachRecorder("elCloneSample");
+  attachRecorder("f5Ref");
+  attachRecorder("voxRef");
   fillGeminiVoices();
   initGemStyleChips();
   initElStyleChips();
@@ -3353,6 +3491,7 @@ function init(){
 
   document.querySelectorAll(".modeTab").forEach(btn=>{
     btn.addEventListener("click", ()=>{
+      if (_activeRec) _activeRec.stop();   /* never leave the mic running across panes */
       document.querySelectorAll(".modeTab").forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
       currentMode = btn.dataset.mode;
