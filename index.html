@@ -926,6 +926,116 @@ function encodeWav(buffer){
   return ab;
 }
 
+/* ---------------- playback-speed render (pitch-preserved WSOLA) --------------
+   Downloads and shares follow the player's speed button: the audio is
+   re-rendered at the chosen rate with WSOLA time-stretching so the pitch
+   stays natural. wsolaStretchChan is a PURE function (no DOM/window
+   references) so it can be extracted and unit-tested standalone. */
+function wsolaStretchChan(input, rate){
+  const n = input ? input.length : 0;
+  if (!n || !(rate > 0) || rate === 1) return new Float32Array(input);
+  const WIN = 1024, SYN = 256, SEARCH = 256;
+  if (n < WIN){
+    /* Too short for WSOLA — plain linear-interp resample; never throws and
+       the length still follows the rate. */
+    const m = Math.max(1, Math.round(n / rate));
+    const o = new Float32Array(m);
+    for (let i = 0; i < m; i++){
+      const pos = i * rate, j = Math.floor(pos), f = pos - j;
+      const a = input[Math.min(j, n - 1)], b = input[Math.min(j + 1, n - 1)];
+      o[i] = a + (b - a) * f;
+    }
+    return o;
+  }
+  const targetLen = Math.max(1, Math.round(n / rate));
+  const anaHop = Math.max(1, Math.round(SYN * rate));
+  /* Zero-padded copy: analysis positions may run past the end and fade out. */
+  const inp = new Float32Array(n + WIN);
+  inp.set(input);
+  const win = new Float32Array(WIN);
+  for (let i = 0; i < WIN; i++) win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (WIN - 1));
+  const cap = targetLen + WIN;
+  const acc = new Float32Array(cap);
+  const env = new Float32Array(cap);
+  const OVER = WIN - SYN;
+  let inPos = 0, outPos = 0;
+  const corr = (cand, stride)=>{
+    let c = 0, e = 0;
+    for (let i = 0; i < OVER; i += stride){
+      const s = inp[cand + i];
+      c += s * acc[outPos + i];
+      e += s * s;
+    }
+    return e > 1e-9 ? c / Math.sqrt(e) : c;
+  };
+  while (outPos < targetLen){
+    let p = inPos;
+    if (outPos > 0){
+      /* Two-stage search near inPos for the frame whose start best continues
+         the already-written overlap (max normalised cross-correlation). */
+      const lo = Math.max(0, inPos - SEARCH), hi = Math.min(n, inPos + SEARCH);
+      let best = -Infinity, coarse = inPos;
+      for (let cand = lo; cand <= hi; cand += 4){
+        const s = corr(cand, 4);
+        if (s > best){ best = s; coarse = cand; }
+      }
+      best = -Infinity;
+      const fLo = Math.max(0, coarse - 4), fHi = Math.min(n, coarse + 4);
+      for (let cand = fLo; cand <= fHi; cand++){
+        const s = corr(cand, 2);
+        if (s > best){ best = s; p = cand; }
+      }
+    }
+    for (let i = 0; i < WIN; i++){
+      const w = win[i];
+      acc[outPos + i] += inp[p + i] * w;
+      env[outPos + i] += w;
+    }
+    inPos += anaHop;
+    outPos += SYN;
+  }
+  const out = new Float32Array(targetLen);
+  for (let i = 0; i < targetLen; i++){
+    const v = env[i] > 1e-4 ? acc[i] / env[i] : acc[i];
+    out[i] = v > 1 ? 1 : (v < -1 ? -1 : v);
+  }
+  return out;
+}
+/* Decode a blob (same pattern as applyVolume), stretch every channel at the
+   given rate, and re-encode as WAV. Returns null on ANY error so callers can
+   fall back to the original blob. Results are cached per (blob, rate). */
+const _stretchCache = new Map();
+async function stretchBlobToRate(blob, rate){
+  if (!blob || !rate || rate === 1) return blob;
+  let byRate = _stretchCache.get(blob);
+  if (byRate && byRate.has(rate)) return byRate.get(rate);
+  const job = (async ()=>{
+    try{
+      const raw = await blob.arrayBuffer();
+      const ctx = audioCtx();
+      const buf = await ctx.decodeAudioData(raw.slice(0));
+      const nCh = buf.numberOfChannels;
+      const outLen = Math.max(1, Math.round(buf.length / rate));
+      const outBuf = ctx.createBuffer(nCh, outLen, buf.sampleRate);
+      for (let ch = 0; ch < nCh; ch++)
+        outBuf.getChannelData(ch).set(wsolaStretchChan(buf.getChannelData(ch), rate));
+      if (ctx.close) ctx.close();
+      return new Blob([encodeWav(outBuf)], { type: "audio/wav" });
+    }catch(e){ return null; }
+  })();
+  if (!byRate){ byRate = new Map(); _stretchCache.set(blob, byRate); }
+  byRate.set(rate, job);
+  return job;
+}
+/* One-off download of an in-memory blob via a temporary anchor. */
+function downloadBlob(blob, name){
+  const u = URL.createObjectURL(blob);
+  const t = document.createElement("a");
+  t.href = u; t.download = name || "burmese-tts.wav";
+  document.body.appendChild(t); t.click(); t.remove();
+  setTimeout(()=>{ try{ URL.revokeObjectURL(u); }catch(e){} }, 4000);
+}
+
 /* ---------------- API layer (auth + wake handling) ---------------- */
 class WakeError extends Error {}
 /* Session expiry: a pub API 401 while we hold a session means the login
@@ -1227,7 +1337,7 @@ function makePlayer(audio, mount, opts){
   paint();
   const initialSrc = audio.getAttribute("src") || audio.src || "";
   if (initialSrc) refreshPeaks(initialSrc);
-  return { audio: audio, load: load, reset: reset, paint: paint };
+  return { audio: audio, load: load, reset: reset, paint: paint, getRate: ()=> SPD_RATES[spdIdx] };
 }
 /* Attach a compact local-file preview under one audio upload input.
    Choosing a file points the preview at URL.createObjectURL(file);
@@ -1576,8 +1686,16 @@ async function showResult(blob, mode, chars, ext){
 async function shareResult(){
   if (!lastResultBlob){ $("dlLink").click(); return; }
   try{
-    const file = new File([lastResultBlob], lastResultName || "burmese-tts.mp3",
-      { type: lastResultBlob.type || "audio/mpeg" });
+    /* At a non-1 player speed, share the pitch-preserved stretched render
+       (same filename); on any stretch failure keep the original blob. */
+    let shareBlob = lastResultBlob, shareType = lastResultBlob.type || "audio/mpeg";
+    const rate = resultPlayer && resultPlayer.getRate ? resultPlayer.getRate() : 1;
+    if (rate !== 1){
+      const stretched = await stretchBlobToRate(lastResultBlob, rate);
+      if (stretched){ shareBlob = stretched; shareType = "audio/wav"; }
+    }
+    const file = new File([shareBlob], lastResultName || "burmese-tts.mp3",
+      { type: shareType });
     if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share){
       await navigator.share({ files: [file] });
       return;
@@ -1671,11 +1789,28 @@ async function renderHistory(){
     const audio = document.createElement("audio");
     audio.preload = "metadata";
     if (url) audio.src = url;
-    makePlayer(audio, mount, { compact:true });
+    const api = makePlayer(audio, mount, { compact:true });
     const foot = document.createElement("div"); foot.className = "histFoot";
     const dl = document.createElement("a");
     dl.className = "dlBtn"; dl.href = url || "#"; dl.download = entry.fileName || "burmese-tts.wav";
     dl.textContent = "⬇️ ဒေါင်းလုပ်ဆွဲ";
+    /* ⬇️ follows this row's player speed: at rate ≠ 1 download the stretched
+       render instead; rate 1 (or any failure) keeps the original anchor. */
+    dl.addEventListener("click", async (e)=>{
+      if (dl.dataset.busy) return;               // fallback re-click: let it through
+      const rate = api && api.getRate ? api.getRate() : 1;
+      if (rate === 1 || !entry.blob) return;
+      e.preventDefault();
+      dl.dataset.busy = "1";
+      const origText = dl.textContent;
+      dl.textContent = origText + " ⏳";
+      try{
+        const stretched = await stretchBlobToRate(entry.blob, rate);
+        if (stretched) downloadBlob(stretched, entry.fileName || "burmese-tts.wav");
+        else dl.click();
+      }catch(err){ try{ dl.click(); }catch(e2){} }
+      finally{ delete dl.dataset.busy; dl.textContent = origText; }
+    });
     const del = document.createElement("button");
     del.type = "button"; del.className = "small"; del.textContent = "🗑";
     del.setAttribute("aria-label", "Delete history entry");
@@ -2595,6 +2730,26 @@ function init(){
   renderHistory();
   registerServiceWorker();
   $("btnShare").addEventListener("click", shareResult);
+  /* ⬇️ The download follows the result player's speed: at rate ≠ 1 the file
+     is re-rendered pitch-preserved at that speed first; at rate 1 the
+     original link behaviour is completely untouched. The dlBusy flag lets
+     the fallback re-click pass through exactly once without recursing. */
+  let dlBusy = false;
+  $("dlLink").addEventListener("click", async (e)=>{
+    if (dlBusy) return;                          // fallback re-click: let it through
+    const rate = resultPlayer && resultPlayer.getRate ? resultPlayer.getRate() : 1;
+    if (rate === 1 || !lastResultBlob) return;
+    e.preventDefault();
+    dlBusy = true;
+    const link = $("dlLink"), origText = link.textContent;
+    link.textContent = origText + " ⏳";
+    try{
+      const stretched = await stretchBlobToRate(lastResultBlob, rate);
+      if (stretched) downloadBlob(stretched, lastResultName || link.download || "burmese-tts.wav");
+      else link.click();
+    }catch(err){ try{ link.click(); }catch(e2){} }
+    finally{ link.textContent = origText; dlBusy = false; }
+  });
   $("btnClearHistory").addEventListener("click", async ()=>{
     if (!window.confirm("History အားလုံး ဖျက်မှာ သေချာလား?")) return;
     await historyClear();
