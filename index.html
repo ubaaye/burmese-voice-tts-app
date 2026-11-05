@@ -24,7 +24,7 @@
     font-weight:400;font-style:normal;font-display:swap;}
   @font-face{font-family:"Padauk Web";src:url("padauk-bold.woff2") format("woff2");
     font-weight:700;font-style:normal;font-display:swap;}
-  /* Liquid Glass theme (V45) — ROOT CAUSE FOUND by a live bisect
+  /* Liquid Glass theme (V46) — ROOT CAUSE FOUND by a live bisect
      test: a test page replicating this app's exact structure, run in
      a real browser, proved that background features painted as the
      BODY element's own background show through every glass panel,
@@ -39,13 +39,21 @@
      light bands, the four soft glows) is now painted as the body
      element's OWN background with background-attachment:fixed, and
      the pseudo rules are removed entirely.
-     Kept from V44: three WIDE flowing light bands (150–180px tall,
-     bright core rgba(255,176,84,.50)) crossing the viewport at
-     ~8% / ~48% / ~82% heights — an earlier live test proved only
-     bold, wide features survive backdrop blur (fine 1.2px dots
-     blur out completely and remain only as a subtle outside-panel
-     texture) — and glass blur 6px (saturate 130%) so the bands
-     read clearly through the panels. */
+     Kept from V44: three WIDE flowing light bands crossing the
+     viewport at ~8% / ~48% / ~82% heights — an earlier live test
+     proved only bold, wide features survive backdrop blur (fine
+     1.2px dots blur out completely and remain only as a subtle
+     outside-panel texture) — and glass blur 6px (saturate 130%)
+     so the bands read clearly through the panels.
+     V46 vivid boost: a real-browser visual check of V45 PASSED,
+     qualified — the bands recognisably continue through the
+     panels, softened as frosted glass should be, but read dim
+     (~1/3 of their outside brightness; the blur spreads their
+     light). So this round strengthens ONLY the scene: band cores
+     .50 → .68, shoulders .15/.16 → .30, band spans widened ~25px
+     per side, top streak .30 → .42 (mid .12 → .18), main glows
+     .45 → .52 and .20 → .26 — vivid like the reference sample.
+     Glass surfaces untouched. */
   :root{
     --glass: rgba(255,255,255,.07);
     --glassfill: linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,.015) 45%, rgba(255,255,255,.04));
@@ -68,19 +76,20 @@
        colours and stops as an equivalent radial-gradient: radii
        82.5vw x 32.4vh, centred at 50% / 21vh), the dot grid, three
        WIDE flowing light bands crossing the full viewport width
-       (bright core rgba(255,176,84,.50), ~150–180px tall, centred
-       at ~8% / ~48% / ~82% viewport height), then four large soft
+       (bright core rgba(255,176,84,.68) after the V46 vivid boost,
+       ~200–230px tall, centred at ~8% / ~48% / ~82% viewport
+       height), then four large soft
        amber glows — all over the neutral near-black base #0a0a0b.
        background-attachment:fixed pins the bands to their viewport
        heights while scrolling, matching the old fixed layer. */
     background:
-      radial-gradient(ellipse 82.5vw 32.4vh at 50% 21vh, rgba(255,165,55,.30), rgba(255,150,40,.12) 55%, transparent 75%),
+      radial-gradient(ellipse 82.5vw 32.4vh at 50% 21vh, rgba(255,165,55,.42), rgba(255,150,40,.18) 55%, transparent 75%),
       radial-gradient(rgba(255,255,255,.10) 1.2px, transparent 1.8px),
-      linear-gradient(172deg, transparent calc(8% - 80px), rgba(255,176,84,.16) calc(8% - 50px), rgba(255,176,84,.50) 8%, rgba(255,176,84,.16) calc(8% + 50px), transparent calc(8% + 80px)),
-      linear-gradient(175deg, transparent calc(48% - 90px), rgba(255,176,84,.15) calc(48% - 58px), rgba(255,176,84,.50) 48%, rgba(255,176,84,.15) calc(48% + 58px), transparent calc(48% + 90px)),
-      linear-gradient(169deg, transparent calc(82% - 75px), rgba(255,176,84,.16) calc(82% - 48px), rgba(255,176,84,.50) 82%, rgba(255,176,84,.16) calc(82% + 48px), transparent calc(82% + 75px)),
-      radial-gradient(720px 520px at 10% 2%, rgba(255,150,40,.45), transparent 65%),
-      radial-gradient(840px 620px at 108% 42%, rgba(255,150,40,.20), transparent 65%),
+      linear-gradient(172deg, transparent calc(8% - 105px), rgba(255,176,84,.30) calc(8% - 50px), rgba(255,176,84,.68) 8%, rgba(255,176,84,.30) calc(8% + 50px), transparent calc(8% + 105px)),
+      linear-gradient(175deg, transparent calc(48% - 115px), rgba(255,176,84,.30) calc(48% - 58px), rgba(255,176,84,.68) 48%, rgba(255,176,84,.30) calc(48% + 58px), transparent calc(48% + 115px)),
+      linear-gradient(169deg, transparent calc(82% - 100px), rgba(255,176,84,.30) calc(82% - 48px), rgba(255,176,84,.68) 82%, rgba(255,176,84,.30) calc(82% + 48px), transparent calc(82% + 100px)),
+      radial-gradient(720px 520px at 10% 2%, rgba(255,150,40,.52), transparent 65%),
+      radial-gradient(840px 620px at 108% 42%, rgba(255,150,40,.26), transparent 65%),
       radial-gradient(780px 580px at -6% 94%, rgba(255,160,50,.22), transparent 65%),
       radial-gradient(460px 320px at 84% 14%, rgba(255,196,107,.16), transparent 60%)
       #0a0a0b;
