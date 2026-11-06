@@ -1429,6 +1429,7 @@ function busy(on, label){
     pop.setAttribute("aria-hidden", on ? "false" : "true");
   }
   if (on) setMsg("statusMsg", label || "⏳ အသံ ထုတ်နေပါတယ် — ခဏ စောင့်ပါ…", "info");
+  refreshScrollLock();
 }
 /* Start/finish feedback for NON-generation network operations (the
    ElevenLabs voice add / delete / list refresh): the standing rule is
@@ -1466,6 +1467,19 @@ function opBusy(on, label){
       if (cancel) cancel.classList.remove("hidden");
     }
   }
+  refreshScrollLock();
+}
+/* Background scroll lock (user report 2026-11-06): while the drawer,
+   a bottom sheet or a centred pop-up is open, the page behind must
+   NOT scroll. Recomputed from the DOM after every open/close, so
+   stacked overlays can never unlock the page early. */
+function refreshScrollLock(){
+  const drawerOpen = !!($("drawer") && $("drawer").classList.contains("open"));
+  const sheetOpen = !!document.querySelector(".sheet.open");
+  const popOpen = ["loadPop", "donePop"].some(id => { const el = $(id); return !!el && !el.classList.contains("hidden"); });
+  const v = (drawerOpen || sheetOpen || popOpen) ? "hidden" : "";
+  document.body.style.overflow = v;
+  document.documentElement.style.overflow = v;
 }
 function showWake(on){ $("wakeBox").classList.toggle("hidden", !on); if(on) setMsg("statusMsg",""); }
 /* Build the Gemini style preset chips: click -> English style into #gemStyle.
@@ -2740,9 +2754,11 @@ function showDonePop(mode, secs){
   if (meta) meta.textContent = (MODE_NAMES[mode] || mode) +
     ((typeof secs === "number" && isFinite(secs) && secs > 0) ? " · " + fmtPlayerTime(secs) : "");
   pop.classList.remove("hidden");
+  refreshScrollLock();
 }
 function hideDonePop(){
   const pop = $("donePop"); if (pop) pop.classList.add("hidden");
+  refreshScrollLock();
 }
 $("btnDonePlay").addEventListener("click", ()=>{
   hideDonePop();
@@ -3806,12 +3822,14 @@ function openDrawer(){
   $("drawer").classList.add("open");
   $("drawer").setAttribute("aria-hidden", "false");
   $("drawerBackdrop").classList.remove("hidden");
+  refreshScrollLock();
 }
 function closeDrawer(){
   const d = $("drawer"); if (!d) return;
   d.classList.remove("open");
   d.setAttribute("aria-hidden", "true");
   $("drawerBackdrop").classList.add("hidden");
+  refreshScrollLock();
 }
 
 /* ---------------- bottom-sheet pop-ups ----------------
@@ -3825,6 +3843,7 @@ function openSheetEl(el){
   el.classList.add("open");
   el.setAttribute("aria-hidden", "false");
   $("sheetBackdrop").classList.remove("hidden");
+  refreshScrollLock();
 }
 function closeSheets(){
   /* Any sheet close that is not the confirm sheet's Yes button counts
@@ -3832,6 +3851,7 @@ function closeSheets(){
   settleConfirm(false);
   document.querySelectorAll(".sheet").forEach(s=>{ s.classList.remove("open"); s.setAttribute("aria-hidden","true"); });
   $("sheetBackdrop").classList.add("hidden");
+  refreshScrollLock();
 }
 function openKeysSheet(){ openSheetEl($("sheetKeys")); }
 function openSettingsSheet(){ openSheetEl($("sheetSettings")); }
