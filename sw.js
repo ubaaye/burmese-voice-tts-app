@@ -9,8 +9,8 @@
  * - index.html / the app document is NEVER cached (always live).
  * - All API and Supabase traffic (cross-origin) passes straight through.
  */
-const CACHE = "bvtts-static-v1";
-const CACHEABLE = /(?:padauk-(?:regular|bold)\.woff2|icon-(?:192|512)\.png|apple-touch-icon\.png|og\.png|sample-[a-z]+\.mp3)$/;
+const CACHE = "bvtts-static-v2";
+const CACHEABLE = /(?:padauk-(?:regular|bold)\.woff2|logo-(?:192|512|180)\.png|og\.png|sample-[a-z]+\.mp3)$/;
 
 self.addEventListener("install", () => { self.skipWaiting(); });
 
