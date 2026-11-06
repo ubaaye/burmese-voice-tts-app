@@ -57,10 +57,17 @@
      V47 (2026-11-06, at the user's request): palette recoloured
      amber -> SILVER — identical scene geometry and alphas, with
      silver-white bands/glows, a silver accent gradient and cooled
-     text colours. Glass surfaces untouched. */
+     text colours. Glass surfaces untouched.
+     V49 (2026-11-06, at the user's request): the whole app now
+     uses the slide menu's SMOKED glass. The drawer only looked
+     darker because it floats over the .55 black backdrop; the
+     main surfaces now carry that darkness in their own fill
+     (--glassfill is a dark smoked tint) and the surface blur
+     rises 6px -> 16px, so the silver scene glows softly behind
+     panels instead of glaring through them. */
   :root{
     --glass: rgba(255,255,255,.07);
-    --glassfill: linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,.015) 45%, rgba(255,255,255,.04));
+    --glassfill: linear-gradient(135deg, rgba(34,38,47,.66), rgba(19,21,26,.60) 45%, rgba(29,32,39,.64));
     --glass-border: rgba(255,255,255,.18);
     --txt:#f4f6fa; --muted:#c3cad4;
     --accent:#c9d2e0; --accent2:#eef2f8;
@@ -103,14 +110,14 @@
   .wrap{max-width:1080px;margin:0 auto;padding:18px 16px 48px;}
   header.top{display:flex;align-items:center;gap:10px;padding:10px 14px;margin-bottom:16px;
     background:var(--glassfill);border:1px solid var(--glass-border);border-radius:14px;
-    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
+    backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),inset 0 -18px 30px -18px rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.45);}
   header.top .logo{font-size:26px;} header.top .logo img{width:34px;height:34px;border-radius:9px;display:block;}
   header.top h1{font-size:19px;margin:0;font-weight:700;letter-spacing:.2px;}
   header.top .sub{font-size:11px;color:#171a20;background:var(--gold);border-radius:20px;padding:2px 8px;font-weight:700;}
   .card{
     background:var(--glassfill);border:1px solid var(--glass-border);border-radius:var(--radius);
-    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
+    backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);
     padding:14px;margin-bottom:12px;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),inset 0 -18px 30px -18px rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.45);
   }
@@ -140,7 +147,7 @@
   .errField{border-color:#f87171 !important;}
   .fieldErr{flex:0 0 100%;width:100%;color:#f87171;font-size:12.5px;line-height:1.5;margin-top:6px;}
   .msg.err{color:var(--danger);} .msg.ok{color:var(--ok);} .msg.info{color:var(--muted);}
-  .warn{background:var(--glassfill);backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
+  .warn{background:var(--glassfill);backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),0 10px 24px rgba(0,0,0,.35);
     border:1px solid rgba(198,208,224,.45);color:var(--gold);
     border-radius:10px;padding:9px 11px;font-size:12.5px;margin-bottom:12px;line-height:1.55;}
@@ -158,7 +165,7 @@
     background:linear-gradient(135deg,#6fe3a5,#34c759);padding:2px 7px;border-radius:20px;}
   .badgeBeta{position:absolute;top:7px;right:8px;font-size:10px;font-weight:800;color:#f4f6fa;
     background:rgba(255,255,255,.16);padding:2px 7px;border-radius:20px;}
-  .proLock{background:var(--glassfill);backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
+  .proLock{background:var(--glassfill);backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03);
     border:1px dashed rgba(198,208,224,.45);color:#dbe3ee;
     border-radius:10px;padding:9px 11px;font-size:12.5px;line-height:1.6;margin-top:10px;}
@@ -218,7 +225,7 @@
   .audioPlayer.compact .apCtl .apTime{min-width:0;}
   /* Generation history (IndexedDB-backed) */
   .histRow{background:var(--glassfill);border:1px solid var(--glass-border);border-radius:12px;
-    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
+    backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),0 10px 24px rgba(0,0,0,.35);
     padding:10px 12px;margin-top:10px;}
   .histHead{display:flex;justify-content:space-between;gap:8px;font-size:13.5px;font-weight:600;}
@@ -241,13 +248,13 @@
   .keyRow .eye{flex:0 0 auto;padding:9px 10px;}
   .profileHead{width:100%;text-align:left;font-weight:700;font-size:15px;display:flex;justify-content:space-between;align-items:center;}
   .notice{background:var(--glassfill);border:1px solid var(--glass-border);border-radius:10px;
-    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
+    backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),0 10px 24px rgba(0,0,0,.35);
     padding:9px 11px;font-size:12.5px;line-height:1.65;margin-top:10px;color:#e8edf4;}
   /* Landing view (signed-out first impression: samples + features + how-to) */
   .landingPitch{font-size:14.5px;line-height:1.65;margin:4px 0 12px;}
   .sampleRow{background:var(--glassfill);border:1px solid var(--glass-border);border-radius:12px;
-    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
+    backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),0 10px 24px rgba(0,0,0,.35);
     padding:10px 12px;margin-top:10px;}
   .sampleRow:first-of-type{margin-top:2px;}
@@ -277,7 +284,7 @@
   .loadPop{position:fixed;inset:0;z-index:75;display:flex;align-items:center;justify-content:center;
     padding:20px;background:rgba(8,8,10,.55);}
   .loadPopCard{background:var(--glassfill);border:1px solid var(--glass-border);border-radius:18px;
-    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
+    backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),inset 0 -18px 30px -18px rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.45);padding:22px 24px 18px;max-width:min(88vw,360px);
     text-align:center;}
   .loadWave{display:flex;gap:3px;justify-content:center;align-items:center;height:30px;}
@@ -312,7 +319,7 @@
   .pickBtn .badgePro,.pickBtn .badgeFree,.pickBtn .badgeBeta{position:static;flex:0 0 auto;}
   /* Bottom-sheet pop-ups (pickers + settings) */
   .sheet{position:fixed;left:0;right:0;bottom:0;z-index:81;max-width:560px;margin:0 auto;
-    background:var(--glassfill);backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);border:1px solid var(--glass-border);border-bottom:none;
+    background:var(--glassfill);backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);border:1px solid var(--glass-border);border-bottom:none;
     border-radius:18px 18px 0 0;padding:14px 14px calc(16px + env(safe-area-inset-bottom));
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),inset 0 -18px 30px -18px rgba(255,255,255,.05),0 -18px 40px rgba(0,0,0,.45);max-height:84dvh;display:flex;flex-direction:column;
     transform:translateY(110%);visibility:hidden;transition:transform .28s ease, visibility 0s linear .28s;}
@@ -333,7 +340,7 @@
   .drawer{
     position:fixed;top:0;left:0;height:100dvh;width:82%;max-width:340px;z-index:60;
     background:var(--glassfill);border-right:1px solid var(--glass-border);
-    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
+    backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),inset 0 -18px 30px -18px rgba(255,255,255,.05),18px 0 40px rgba(0,0,0,.45);
     padding:14px 12px calc(20px + env(safe-area-inset-bottom));overflow-y:auto;
     transform:translateX(-110%);visibility:hidden;
@@ -344,7 +351,7 @@
   /* ===== Website shell (landing nav / hero / grids / footer) ===== */
   .siteNav{position:sticky;top:0;z-index:50;display:none;
     background:var(--glassfill);border-bottom:1px solid var(--glass-border);
-    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
+    backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),inset 0 -18px 30px -18px rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.45);}
   body:has(#appArea.hidden) .siteNav{display:block;}
   .navIn{max-width:1080px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:9px;}
@@ -361,14 +368,14 @@
   .featGrid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:6px;}
   .featCard{display:flex;gap:11px;align-items:flex-start;background:var(--glassfill);
     border:1px solid var(--glass-border);border-radius:12px;padding:11px 12px;
-    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
+    backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),0 10px 24px rgba(0,0,0,.35);}
   .featIcon{font-size:19px;line-height:1.3;flex:0 0 auto;}
   .featTitle{font-weight:700;font-size:14px;line-height:1.4;}
   .featLine{font-size:12.5px;color:var(--muted);line-height:1.55;margin-top:1px;}
   .stepsGrid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:6px;}
   .stepCard{background:var(--glassfill);border:1px solid var(--glass-border);border-radius:12px;
-    backdrop-filter:blur(6px) saturate(130%);-webkit-backdrop-filter:blur(6px) saturate(130%);
+    backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),0 10px 24px rgba(0,0,0,.35);
     padding:12px;font-size:13.5px;line-height:1.7;}
   .stepCard b{color:var(--accent);}
