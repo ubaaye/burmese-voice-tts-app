@@ -292,6 +292,17 @@
     background:linear-gradient(180deg,var(--accent),var(--accent2));
     animation:waveEq 1.05s ease-in-out infinite;}
   .loadPopMsg{font-size:13.5px;line-height:1.55;color:var(--txt);margin-top:12px;min-height:21px;}
+  .donePop{position:fixed;inset:0;z-index:76;display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,.45);padding:18px;}
+  .donePopCard{background:var(--glassfill);border:1px solid var(--glass-border);border-radius:18px;
+    backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.03),inset 0 -18px 30px -18px rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.45);
+    padding:24px 24px 18px;width:min(88vw,340px);text-align:center;animation:donePopIn .22s ease;}
+  @keyframes donePopIn{from{transform:scale(.92);opacity:0;}to{transform:scale(1);opacity:1;}}
+  .donePopIcon{font-size:42px;line-height:1;}
+  .donePopTitle{font-size:19px;font-weight:700;margin-top:10px;}
+  .donePopMeta{font-size:13px;color:var(--muted);margin-top:5px;min-height:17px;}
+  .donePopBtns{display:flex;gap:10px;justify-content:center;margin-top:16px;}
   #btnCancelGen{margin-top:12px;}
   /* Custom confirm sheet: danger action button */
   .btnDanger{background:rgba(255,107,107,.16);border-color:rgba(255,107,107,.65);color:#ffb3b3;font-weight:700;}
@@ -771,6 +782,18 @@
     <div class="loadWave" aria-hidden="true"><span style="animation-delay:-.95s"></span><span style="animation-delay:-.42s;animation-duration:1.2s"></span><span style="animation-delay:-.78s"></span><span style="animation-delay:-.15s;animation-duration:.9s"></span><span style="animation-delay:-.63s"></span><span style="animation-delay:-.30s;animation-duration:1.15s"></span><span style="animation-delay:-.88s"></span><span style="animation-delay:-.05s;animation-duration:.95s"></span><span style="animation-delay:-.55s"></span><span style="animation-delay:-.72s;animation-duration:1.25s"></span><span style="animation-delay:-.20s"></span><span style="animation-delay:-.48s;animation-duration:.9s"></span><span style="animation-delay:-.98s"></span><span style="animation-delay:-.35s;animation-duration:1.1s"></span><span style="animation-delay:-.68s"></span><span style="animation-delay:-.10s;animation-duration:.85s"></span><span style="animation-delay:-.82s"></span><span style="animation-delay:-.52s;animation-duration:1.2s"></span><span style="animation-delay:-.25s"></span><span style="animation-delay:-.60s;animation-duration:.95s"></span><span style="animation-delay:-.90s"></span><span style="animation-delay:-.40s;animation-duration:1.15s"></span><span style="animation-delay:-.75s"></span><span style="animation-delay:-.18s;animation-duration:.9s"></span></div>
     <div id="loadPopMsg" class="loadPopMsg">⏳ အသံ ထုတ်နေပါတယ် — ခဏ စောင့်ပါ…</div>
     <button id="btnCancelGen" type="button">⛔ ရပ်မယ်</button>
+  </div>
+</div>
+
+<div id="donePop" class="donePop hidden" role="alertdialog" aria-label="အသံ ရပါပြီ">
+  <div class="donePopCard">
+    <div class="donePopIcon">✅</div>
+    <div class="donePopTitle">အသံ ရပါပြီ</div>
+    <div id="donePopMeta" class="donePopMeta"></div>
+    <div class="donePopBtns">
+      <button id="btnDonePlay" class="primary" type="button">▶ နားထောင်</button>
+      <button id="btnDoneClose" type="button">ပိတ်မယ်</button>
+    </div>
   </div>
 </div>
 
@@ -1657,6 +1680,19 @@ function isGenAbort(e){
 function throwIfGenAborted(){
   if (genCtl && genCtl.signal.aborted) throw new DOMException("Generation cancelled", "AbortError");
 }
+/* The server's own JSON error body ({"detail": ...}), when one is
+   present: our FastAPI errors always carry one, while a Render
+   wake-up/edge failure returns an HTML page instead. Used to tell a
+   REAL provider error (quota exhausted, upstream failure) apart from
+   the service merely waking up. */
+async function serverDetailError(resp){
+  try{
+    const d = await resp.clone().json();
+    const msg = d && (d.detail || d.message || d.error);
+    if (msg) return new Error(String(msg));
+  }catch(e){}
+  return null;
+}
 async function apiFetch(path, opts){
   opts = opts || {};
   const headers = Object.assign({}, opts.headers||{}, await authHeader());
@@ -1666,15 +1702,29 @@ async function apiFetch(path, opts){
   try{
     resp = await fetch(PUBLIC_API + path, fopts);
   }catch(e){ if (isGenAbort(e)) throw e; throw new WakeError("network"); }
-  if (resp.status === 502 || resp.status === 503) throw new WakeError("http "+resp.status);
+  if (resp.status === 502 || resp.status === 503){
+    /* A 502/503 carrying our JSON detail is a real provider error —
+       show its TRUE text (user request), never the wake-up box. */
+    const real = await serverDetailError(resp);
+    if (real) throw real;
+    throw new WakeError("http "+resp.status);
+  }
   if (resp.status === 401) handleSessionDead();
   return resp;
 }
 async function apiErrorText(resp){
+  let msg;
   try{
     const d = await resp.clone().json();
-    return d.detail || d.message || d.error || ("အမှား "+resp.status);
-  }catch(e){ return "အမှား "+resp.status; }
+    msg = d.detail || d.message || d.error || ("အမှား "+resp.status);
+  }catch(e){ msg = "အမှား "+resp.status; }
+  /* Credit/quota exhaustion (user request 2026-11-06): a clear
+     Burmese headline, with the provider's REAL message kept verbatim
+     after it — never a generic or wrong error text. */
+  if (resp.status === 429 || /quota|resource_exhausted|insufficient|credit/i.test(String(msg))){
+    return "⚠️ Credit/Quota ကုန်သွားပါပြီ — " + msg;
+  }
+  return msg;
 }
 /* Per-engine Pro auth (new access model — the server mirrors this contract):
    a Pro request is authorized by ANY of:
@@ -2472,7 +2522,11 @@ async function voxFetch(path, opts){
   try{
     resp = await fetch(PUBLIC_API + path, fopts);
   }catch(e){ if (isGenAbort(e)) throw e; throw new WakeError("network"); }
-  if (resp.status === 502) throw new WakeError("http 502");
+  if (resp.status === 502){
+    const real = await serverDetailError(resp);
+    if (real) throw real;
+    throw new WakeError("http 502");
+  }
   if (resp.status === 401) handleSessionDead();
   return resp;
 }
@@ -2670,7 +2724,31 @@ async function showResult(blob, mode, chars, ext){
     textSnippet: ta ? String(ta.value || "").trim().slice(0, 80) : "",
     durationSec: secs, blob: processed, fileName: fileName
   });
+  showDonePop(mode, secs);
 }
+/* ✅ Generation-done pop-up (user request 2026-11-06): a centred box
+   the moment a generation succeeds — the old status-line-only notice
+   was too easy to miss. Called ONLY at the end of showResult, so
+   cancelled or failed runs never pop it. */
+function showDonePop(mode, secs){
+  const pop = $("donePop"); if (!pop) return;
+  const meta = $("donePopMeta");
+  if (meta) meta.textContent = (MODE_NAMES[mode] || mode) +
+    ((typeof secs === "number" && isFinite(secs) && secs > 0) ? " · " + fmtPlayerTime(secs) : "");
+  pop.classList.remove("hidden");
+}
+function hideDonePop(){
+  const pop = $("donePop"); if (pop) pop.classList.add("hidden");
+}
+$("btnDonePlay").addEventListener("click", ()=>{
+  hideDonePop();
+  try{
+    const a = resultPlayer && resultPlayer.audio;
+    if (a){ const pr = a.play(); if (pr && pr.catch) pr.catch(()=>{}); }
+  }catch(e){}
+});
+$("btnDoneClose").addEventListener("click", hideDonePop);
+$("donePop").addEventListener("click", (e)=>{ if (e.target === $("donePop")) hideDonePop(); });
 /* 📤 Share the current result via the Web Share API (files) when the
    browser supports it; otherwise fall back to the download link. */
 async function shareResult(){
