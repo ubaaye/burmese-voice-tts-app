@@ -869,7 +869,7 @@
         <input type="password" id="keyPro" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
         <button class="eye" type="button" data-eye="keyPro">👁️</button>
       </div>
-      <div class="muted">Pro code ရှိရင် ကိုယ့် key မထည့်ဘဲ owner ရဲ့ key နဲ့ Pro feature တွေ သုံးနိုင်ပါတယ်။ ကိုယ့် key ထည့်ထားရင် code မလိုပါ။</div>
+      <div class="muted">Pro code ရှိရင် ကိုယ့် key မထည့်ဘဲ server key နဲ့ Pro feature တွေ သုံးနိုင်ပါတယ်။ Code ထည့်ထားရင် ကိုယ့် key ထည့်ထားလည်း server key ကိုပဲ သုံးပါတယ်။ Admin (owner Gmail) login ဆိုရင် code လည်း key လည်း ထည့်စရာ မလိုပါ။</div>
 
       <button id="btnSaveKeys" class="primary" style="width:100%;margin-top:14px;">💾 သိမ်းမယ်</button>
       <button id="btnResetKeys" type="button" style="width:100%;margin-top:8px;">↺ Reset</button>
@@ -1745,10 +1745,13 @@ async function apiErrorText(resp){
   return msg;
 }
 /* Per-engine Pro auth (new access model — the server mirrors this contract):
-   a Pro request is authorized by ANY of:
-   (a) the visitor's OWN key for that engine  -> send ONLY that key header, no code;
-   (b) a valid Pro Code and NO own key        -> send ONLY X-Pro-Code (owner's keys used);
-   (c) the owner login                        -> send neither (owner's keys used). */
+   a Pro request is authorized by ANY of, in this priority order:
+   (a) the owner (Admin Gmail) login          -> send neither (server key pool used);
+   (b) a valid Pro Code (UUID login)          -> send ONLY X-Pro-Code (server key pool used);
+   (c) the visitor's OWN key for that engine  -> send ONLY that key header, no code.
+   Owner/Code win over a saved own key (user rule 2026-11-13): Admin and
+   UUID logins must never need to add keys in the app — the server's
+   keys serve them, and a stale saved own key must not shadow that. */
 const PRO_ENGINE_KEY    = { el:"el_key", gemini:"gemini_key", f5:"hf_token" };
 const PRO_ENGINE_HEADER = { el:"X-EL-Key", gemini:"X-Gemini-Key", f5:"X-HF-Token" };
 const PRO_LOCKED_TEXT = "🔒 ကိုယ့် API Key ထည့်ရင် code မလိုဘဲ သုံးလို့ရပါတယ် — ဒါမှမဟုတ် Pro Code ထည့်ရင် owner ရဲ့ key နဲ့ သုံးလို့ရပါတယ်";
@@ -1758,20 +1761,26 @@ function proUnlocked(engine){
   if (field && keys[field]) return true;
   return !!keys.pro_code;
 }
-/* How an engine is unlocked: "own" (own key) | "owner" | "code" (owner key via code) | "" */
+/* How an engine is unlocked: "owner" | "code" (server key pool) | "own" (own key) | "" */
 function unlockVia(engine){
-  const field = PRO_ENGINE_KEY[engine];
-  if (field && keys[field]) return "own";
   if (isOwner()) return "owner";
   if (keys.pro_code) return "code";
+  const field = PRO_ENGINE_KEY[engine];
+  if (field && keys[field]) return "own";
   return "";
 }
 function proHeadersFor(engine, extra){
   const h = {};
-  const field = PRO_ENGINE_KEY[engine];
-  const ownKey = field ? (keys[field] || "") : "";
-  if (ownKey) h[PRO_ENGINE_HEADER[engine]] = ownKey;
-  else if (keys.pro_code && !isOwner()) h["X-Pro-Code"] = keys.pro_code;
+  if (isOwner()){
+    /* Owner login: send neither a key nor a code — the server
+       recognises the account and uses its own key pool. */
+  }
+  else if (keys.pro_code) h["X-Pro-Code"] = keys.pro_code;
+  else {
+    const field = PRO_ENGINE_KEY[engine];
+    const ownKey = field ? (keys[field] || "") : "";
+    if (ownKey) h[PRO_ENGINE_HEADER[engine]] = ownKey;
+  }
   return Object.assign(h, extra||{});
 }
 
